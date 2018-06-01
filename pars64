@@ -1,0 +1,5 @@
+256 8 1024 16 64 16 4 1024
+3.125000e-02 5.000000e-01
+
+//N,Nrot,Ntheta,M,Nz,Nzp,ngpus,niters
+//lambda0,lambda1
