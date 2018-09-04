@@ -13,7 +13,7 @@ Set CUDAHOME environmental variable, run
 python setup.py install
 
 ## Execution
-./rectv <parameters file> <name of the binary data file> <name of the binary reconstruction file>
+* ./rectv <parameters file> <name of the binary data file> <name of the binary reconstruction file> *
   
 Example: ./rectv pars64 gbubbles64 rec64
 
