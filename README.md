@@ -1,7 +1,7 @@
 # rectv_gpu
 # Four-dimensional tomographic reconstruction by time domain decomposition
 
-# Installation
+## Installation
 make - for building an executable file
 
 python setup.py install  - for building  python modules
