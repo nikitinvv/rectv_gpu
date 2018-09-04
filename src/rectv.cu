@@ -357,7 +357,7 @@ void rectv::itertvR(float *fres, float *g_, size_t niter)
 				float* tmp=0;
 				tmp=ft;ft=ftn;ftn=tmp;
 				tmp=f;f=fn;fn=tmp;
-				if(iter%32==0) fprintf(stderr,"%d ",iter);
+				if(iter%32==0) { fprintf(stderr,"iterations (%d/%d) \r",iter, niter); fflush(stdout);}
 
 			}
 		}
@@ -372,3 +372,9 @@ void rectv::itertvR(float *fres, float *g_, size_t niter)
 		ft[i]*=mcons;
 	cudaMemcpy(fres,ft,N*N*M*Nz*sizeof(float),cudaMemcpyDefault);	
 }
+
+void rectv::itertvR_wrap(float *fres, int N0, float *g_, int N1, size_t niter)
+{
+	itertvR(fres,g_,niter);
+}
+

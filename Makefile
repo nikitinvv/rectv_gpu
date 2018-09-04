@@ -1,4 +1,4 @@
-CUDA_PATH ?= "/sw/pkg/cuda_x86/cuda-9.1/"
+CUDA_PATH ?= "/usr/local/cuda-8.0/"
 
 NVCC          := $(CUDA_PATH)/bin/nvcc
 
@@ -8,7 +8,7 @@ LDFLAGS     := -lcufft -lgomp
 
 
 # Gencode arguments
-SMS ?= 35 50 52 60 61 62 70
+SMS ?= 35 50 52 60 61 62 
 
 ifeq ($(GENCODE_FLAGS),)
 # Generate SASS code for each SM architecture listed in $(SMS)

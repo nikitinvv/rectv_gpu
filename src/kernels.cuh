@@ -64,7 +64,7 @@ __global__ void div(float* fn, float* f,float4* h2, float tau, float lambda1, in
 
 }
 
-void __global__ copys(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthetas, int Nz)
+/*void __global__ copys(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthetas, int Nz)
 {
         int tx = blockDim.x * blockIdx.x + threadIdx.x;
         int ty = blockDim.y * blockIdx.y + threadIdx.y;
@@ -89,8 +89,36 @@ void __global__ copys(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthe
                 g[tx+ty*N+tz*N*Ntheta].x = f[tx+ty*N+tz*N*Nthetas].x;
                 g[tx+ty*N+tz*N*Ntheta].y = f[tx+ty*N+tz*N*Nthetas].y;
         }
+}*/
+
+void __global__ copys(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthetas, int Nz)
+{
+        int tx = blockDim.x * blockIdx.x + threadIdx.x;
+        int ty = blockDim.y * blockIdx.y + threadIdx.y;
+        int tz = blockDim.z * blockIdx.z + threadIdx.z;
+
+        if (tx>=N||ty>=Nthetas||tz>=Nz) return;
+        if (flg)//pi to 2pi
+        {
+//                if(tx==0)
+//                {
+//                        g[tx+ty*N+tz*N*Ntheta].x = f[0+ty*N+tz*N*Nthetas].x;
+//                        g[tx+ty*N+tz*N*Ntheta].y = f[0+ty*N+tz*N*Nthetas].y;
+//                }
+//                else
+                {
+                        g[tx+ty*N+tz*N*Ntheta].x = f[N-tx-1+ty*N+tz*N*Nthetas].x;
+                        g[tx+ty*N+tz*N*Ntheta].y = f[N-tx-1+ty*N+tz*N*Nthetas].y;
+                }
+        }
+        else//0 to pi
+        {
+                g[tx+ty*N+tz*N*Ntheta].x = f[tx+ty*N+tz*N*Nthetas].x;
+                g[tx+ty*N+tz*N*Ntheta].y = f[tx+ty*N+tz*N*Nthetas].y;
+        }
 }
 
+/*
 void __global__ adds(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthetas, int Nz)
 {
 	int tx = blockDim.x * blockIdx.x + threadIdx.x;        
@@ -109,6 +137,34 @@ void __global__ adds(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthet
                 {
                         g[N-tx+ty*N+tz*N*Nthetas].x += f[tx+ty*N+tz*N*Ntheta].x;
                         g[N-tx+ty*N+tz*N*Nthetas].y += f[tx+ty*N+tz*N*Ntheta].y;
+                }
+        }
+        else//0 to pi
+        {
+                g[tx+ty*N+tz*N*Nthetas].x += f[tx+ty*N+tz*N*Ntheta].x;
+                g[tx+ty*N+tz*N*Nthetas].y += f[tx+ty*N+tz*N*Ntheta].y;
+        }
+
+}
+*/
+void __global__ adds(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthetas, int Nz)
+{
+	int tx = blockDim.x * blockIdx.x + threadIdx.x;        
+	int ty = blockDim.y * blockIdx.y + threadIdx.y;       
+	int tz = blockDim.z * blockIdx.z + threadIdx.z;        
+	if (tx>=N||ty>=Nthetas||tz>=Nz) return;      
+
+	if (flg)//pi to 2pi
+        {
+//                if(tx==0)
+//                {
+//			g[0+ty*N+tz*N*Nthetas].x += f[tx+ty*N+tz*N*Ntheta].x;
+//                        g[0+ty*N+tz*N*Nthetas].y += f[tx+ty*N+tz*N*Ntheta].y;
+//                }
+//                else
+                {
+                        g[N-tx-1+ty*N+tz*N*Nthetas].x += f[tx+ty*N+tz*N*Ntheta].x;
+                        g[N-tx-1+ty*N+tz*N*Nthetas].y += f[tx+ty*N+tz*N*Ntheta].y;
                 }
         }
         else//0 to pi

@@ -1,5 +1,17 @@
-#include <cuda_runtime.h>
-#include "radonusfft.cuh"
+/*interface*/
+%module rectv
+
+%{
+#define SWIG_FILE_WITH_INIT
+#include "rectv.cuh"
+%}
+
+%include "numpy.i"
+
+%init %{
+import_array();
+%}
+
 
 class rectv
 {
@@ -50,6 +62,8 @@ class rectv
 		  size_t ngpus, float lambda0, float lambda1);
 	~rectv();
 	void itertvR(float *fres,float *g, size_t niter);
-	void itertvR_wrap(float *fres, int N0, float *g_, int N1, size_t niter);
 
+%apply (float* INPLACE_ARRAY1, int DIM1) {(float* fres, int N0)};
+%apply (float* IN_ARRAY1, int DIM1) {(float* g_, int N1)};
+	void itertvR_wrap(float *fres, int N0, float *g_, int N1, size_t niter);
 };
