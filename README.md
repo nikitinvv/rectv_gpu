@@ -3,14 +3,14 @@
 
 # Installation
 ## Building an executable file
-Specify paths in Makefile, run
+Specify paths in `Makefile`, run
 
-make
+`make`
 
 ## Building python modules
-Set CUDAHOME environmental variable, run
+Set `CUDAHOME` environmental variable, run
 
-python setup.py install
+`python setup.py install`
 
 ## Execution
 `./rectv <parameters file> <name of the binary data file> <name of the binary reconstruction file>` 
@@ -51,4 +51,4 @@ See an example in tomobank <ref>
 
 `--algorithm_type` - reconstrution algorithm (tv,gridrec)
 
-`--frame` - central time frame for reconstruction, 8 time frames will be reconstructed by default. Example --frame 92 gives time frames [88,96)
+`--frame` - central time frame for reconstruction, 8 time frames will be reconstructed by default. Example `--frame 92` gives time frames [88,96)
