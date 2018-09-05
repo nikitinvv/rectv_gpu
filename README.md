@@ -45,10 +45,14 @@ lambda0 lambda1`
 ## Use as a module 
 See an example in tomobank <ref>
 
-`python tomopy_rectv.py dk_MCFG_1_p_s1_.h5 --type full --binning 2 --algorithm_type tv --frame 92` 
+`python tomopy_rectv.py dk_MCFG_1_p_s1_.h5 --type subset --nsino 0.75 --binning 2 --algorithm_type gridrec --frame 95`
+
+`--type` - reconstruction type (slice,subset,full)
+
+`--nsino` - location of the sinogram used by slice or subset reconstruction (0 top, 1 bottom)
 
 `--binning` - factor for data downsampling (0,1,2)
 
 `--algorithm_type` - reconstrution algorithm (tv,gridrec)
 
-`--frame` - central time frame for reconstruction, 8 time frames will be reconstructed by default. Example `--frame 92` gives time frames [88,96)
+`--frame` - central time frame for reconstruction, 8 time frames will be reconstructed by default. Example `--frame 95` gives time frames [91,99)
