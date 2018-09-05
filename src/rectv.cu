@@ -357,7 +357,7 @@ void rectv::itertvR(float *fres, float *g_, size_t niter)
 				float* tmp=0;
 				tmp=ft;ft=ftn;ftn=tmp;
 				tmp=f;f=fn;fn=tmp;
-				if(iter%32==0) { fprintf(stderr,"iterations (%d/%d) \r",iter, niter); fflush(stdout);}
+				fprintf(stderr,"iterations (%d/%d) \r",iter, niter); fflush(stdout);
 
 			}
 		}

@@ -99,7 +99,7 @@ def reconstruct(h5fname, sino, nframes, frame, nproj, binning, tv):
 	# Reconstruct. Iterative TV.
 	[Ntheta,Nz,N] = data.shape
 	Nzp = 4 # number of slices to process simultaniously by gpus
-	M = nframes # number of basis functions, must be a multiple of nframes
+	M = nframes*2 # number of basis functions, must be a multiple of nframes
 	lambda0 = pow(2,-9) # regularization parameter 1
 	lambda1 = pow(2,2) # regularization parameter 2 
 	niters = 1024 # number of iterations
