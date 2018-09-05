@@ -157,7 +157,7 @@ def rec_full(h5fname, nframes, frame, nproj, binning, tv):
                 
         # Write data as stack of TIFs.
 	for time_frame in range(0,nframes):
-	        fname = os.path.dirname(h5fname) + '/' + os.path.splitext(os.path.basename(h5fname))[0]+ '_rec_full/' + 'recon' + str(frame-nframes/2+time_frame) + '_'
+	        fname = os.path.dirname(os.path.abspath(h5fname)) + '/' + os.path.splitext(os.path.basename(h5fname))[0]+ '_rec_full/' + 'recon' + str(frame-nframes/2+time_frame) + '_'
 	        print("Reconstructions: ", fname)	
 	        dxchange.write_tiff_stack(rec[time_frame], fname=fname, start=strt)
         strt += (sino[1] - sino[0])/pow(2,2)#########
@@ -179,7 +179,7 @@ def rec_subset(h5fname, nsino, nframes, frame, nproj, binning, tv):
            
     # Write data as stack of TIFs.
     for time_frame in range(0,nframes):
-        fname = os.path.dirname(h5fname) + '/' + os.path.splitext(os.path.basename(h5fname))[0]+ '_rec_subset/' + 'recon' + str(frame-nframes/2+time_frame) + '_'
+        fname = os.path.dirname(os.path.abspath(h5fname)) + '/' + os.path.splitext(os.path.basename(h5fname))[0]+ '_rec_subset/' + 'recon' + str(frame-nframes/2+time_frame) + '_'
         print("Reconstructions: ", fname)	
         dxchange.write_tiff_stack(rec[time_frame], fname=fname, start=sino_start)
     
@@ -202,7 +202,7 @@ def rec_slice(h5fname, nsino, nframes, frame, nproj, binning, tv):
     # Write data as stack of TIFs.
 
     for time_frame in range(0,nframes):
-        fname = os.path.dirname(h5fname) + '/' + os.path.splitext(os.path.basename(h5fname))[0]+ '_rec_slice/' + 'recon' + str(frame-nframes/2+time_frame) + '_'
+        fname = os.path.dirname(os.path.abspath(h5fname)) + '/' + os.path.splitext(os.path.basename(h5fname))[0]+ '_rec_slice/' + 'recon' + str(frame-nframes/2+time_frame) + '_'
         dxchange.write_tiff_stack(rec[time_frame], fname=fname)
         print("Rec: ", fname)
     print("Slice: ", start)
