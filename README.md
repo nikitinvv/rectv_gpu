@@ -45,7 +45,7 @@ lambda0 lambda1`
 ## Use as a module 
 See an example in tomobank <ref>
 
-`python tomopy_rec.py dk_MCFG_1_p_s1_.h5 --type full --binning 2 --algorithm_type tv --frame 92` 
+`python tomopy_rectv.py dk_MCFG_1_p_s1_.h5 --type full --binning 2 --algorithm_type tv --frame 92` 
 
 `--binning` - factor for data downsampling (0,1,2)
 
