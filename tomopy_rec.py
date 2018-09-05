@@ -98,7 +98,7 @@ def reconstruct(h5fname, sino, nframes, frame, nproj, binning, tv):
     if tv:
 	# Reconstruct. Iterative TV.
 	[Ntheta,Nz,N] = data.shape
-	Nzp = Nz # number of slices to process simultaniously by gpus
+	Nzp = 4 # number of slices to process simultaniously by gpus
 	M = nframes # number of basis functions, must be a multiple of nframes
 	lambda0 = pow(2,-9) # regularization parameter 1
 	lambda1 = pow(2,2) # regularization parameter 2 
@@ -133,7 +133,7 @@ def rec_full(h5fname, nframes, frame, nproj, binning, tv):
     sino_start = 0
     sino_end = data_size[1]
 
-    chunks = 60         # number of sinogram chunks to reconstruct
+    chunks = data_size[1]/(8*pow(2,binning))         # number of sinogram chunks to reconstruct
                         # only one chunk at the time is reconstructed
                         # allowing for limited RAM machines to complete a full reconstruction
 
@@ -161,7 +161,29 @@ def rec_full(h5fname, nframes, frame, nproj, binning, tv):
 	        print("Reconstructions: ", fname)	
 	        dxchange.write_tiff_stack(rec[time_frame], fname=fname, start=strt)
         strt += (sino[1] - sino[0])/pow(2,2)#########
+
+def rec_subset(h5fname, nsino, nframes, frame, nproj, binning, tv):
     
+    data_size = get_dx_dims(h5fname, 'data')
+
+    # Select sinogram range to reconstruct.
+    ssino = int(data_size[1] * nsino)
+    sino_start = ssino-4*pow(2,binning)
+    sino_end = ssino+4*pow(2,binning)
+
+    print("Reconstructing [%d] slices from slice [%d] to [%d]" % ((sino_end - sino_start), sino_start, sino_end))            
+
+    sino = (int(sino_start), int(sino_end))
+    # Reconstruct.
+    rec = reconstruct(h5fname, sino, nframes, frame, nproj, binning, tv)
+           
+    # Write data as stack of TIFs.
+    for time_frame in range(0,nframes):
+        fname = os.path.dirname(h5fname) + '/' + os.path.splitext(os.path.basename(h5fname))[0]+ '_rec_subset/' + 'recon' + str(frame-nframes/2+time_frame) + '_'
+        print("Reconstructions: ", fname)	
+        dxchange.write_tiff_stack(rec[time_frame], fname=fname, start=sino_start)
+    
+
 
 def rec_slice(h5fname, nsino, nframes, frame, nproj, binning, tv):
     
@@ -209,8 +231,13 @@ def main(arg):
     nproj = 300 #number of projections per 180 degrees interval
     
     slice = False
+    subset = False
+
     if args.type == "slice":
         slice = True
+    if args.type == "subset":
+        subset = True
+
 
     tv = False
     if args.algorithm_type == "tv":
@@ -219,9 +246,11 @@ def main(arg):
     if os.path.isfile(fname):       
         if slice:             
             rec_slice(fname, nsino, nframes, frame, nproj, binning, tv)
-        else:
-            rec_full(fname, nframes, frame, nproj, binning, tv)
-
+	else: 
+	    if subset:
+	            rec_subset(fname, nsino, nframes, frame, nproj, binning, tv)
+	    else:
+		    rec_full(fname, nframes, frame, nproj, binning, tv)
     else:
         print("File Name does not exist: ", fname)
 
