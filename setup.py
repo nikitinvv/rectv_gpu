@@ -65,7 +65,7 @@ ext = Extension('_rectv',
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
-                                    'nvcc': ['--compiler-options', "'-fPIC'"]},
+                                    'nvcc': ['--compiler-options', "'-fPIC' '-fopenmp'"]},
                 include_dirs = [numpy_include, CUDA['include'], 'src'],)
 
 
