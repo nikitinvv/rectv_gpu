@@ -43,9 +43,9 @@ lambda0 lambda1`
 `lambda1` - temporal regularization parameter
 
 ## Use as a module 
-See an example in tomobank <ref>
+See an example in tomobank https://tomobank.readthedocs.io/en/latest/source/data/docs.data.dynamic.html#foam-data
 
-`python tomopy_rectv.py dk_MCFG_1_p_s1_.h5 --type subset --nsino 0.75 --binning 2 --algorithm_type gridrec --frame 95`
+`python tomopy_rectv.py dk_MCFG_1_p_s1_.h5 --type subset --nsino 0.75 --binning 2 --tv True --frame 95`
 
 `--type` - reconstruction type (slice,subset,full)
 
@@ -53,6 +53,6 @@ See an example in tomobank <ref>
 
 `--binning` - factor for data downsampling (0,1,2)
 
-`--algorithm_type` - reconstrution algorithm (tv,gridrec)
+`--tv` - use tv reconstruction (True,False)
 
 `--frame` - central time frame for reconstruction, 8 time frames will be reconstructed by default. Example `--frame 95` gives time frames [91,99)
