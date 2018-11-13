@@ -2,45 +2,20 @@
 # Four-dimensional tomographic reconstruction by time domain decomposition
 
 # Installation
-## Building an executable file
-Specify paths in `Makefile`, run
-
-`make`
 
 ## Building python modules
 Set `CUDAHOME` environmental variable, run
 
 `python setup.py install`
 
-## Execution
-`./rectv <parameters file> <name of the binary data file> <name of the binary reconstruction file>` 
-  
-Example: `./rectv pars64 gbubbles64 rec64`
+## Simple reconstruction scenario
+Read, filter, normalize data and save it to file 'data.npy'
 
-Parameters file contains information for reconstruction by the proposed method in the following format:
+`python read_continuous`
 
-`N Nrot Ntheta M Nz Nzp ngpus niters
-lambda0 lambda1`
+Reconstruct with the time-domain decompositon + regularization
+`python rec_simple.py`
 
-`N` - reconstruction size in one dimension
-
-`Nrot` - number of rotations
-
-`Ntheta` - total number of projections
-
-`M` - number of basis funcitons
-
-`Nz` - number of slices for reconstruction
-
-`Nzp` - number of slices for simultanious reconstruction on GPU
-
-`ngpus` - number of GPUs
-
-`niters` - number of iterations
-
-`lambda0` - spatial regularization parameter
-
-`lambda1` - temporal regularization parameter
 
 ## Use as a module 
 See an example in tomobank https://tomobank.readthedocs.io/en/latest/source/data/docs.data.dynamic.html#foam-data
