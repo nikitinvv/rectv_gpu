@@ -11,7 +11,7 @@ import tomopy
 import dxchange
 
 h5fname = "/home/beams/VNIKITIN/tomobank_rec/dk_MCFG_1_p_s1_.h5"
-sino = (1300, 1304) # slices for reconstructions
+sino = (1300, 1316) # slices for reconstructions
 nframes = 8 # time frames for reconstruction
 frame = 94 # middle time frame for reconstruction
 nproj = 300 # number of angles for 180 degrees interval
