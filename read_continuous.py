@@ -10,7 +10,7 @@ import h5py
 import tomopy
 import dxchange
 
-h5fname = "/home/beams/VNIKITIN/tomobank_rec/dk_MCFG_1_p_s1_.h5"
+h5fname = "/home/beams/VNIKITIN/3dtv/dk_MCFG_1_p_s1_.h5"
 sino = (1300, 1316) # slices for reconstructions
 nframes = 8 # time frames for reconstruction
 frame = 94 # middle time frame for reconstruction
@@ -40,4 +40,4 @@ if data.shape[1] > 1:
 
 # reshape for 4d
 data = np.reshape(data,[nframes,nproj,data.shape[1],data.shape[2]])
-np.save('data.npy',data)
+np.save('data/foamdata.npy',data)
