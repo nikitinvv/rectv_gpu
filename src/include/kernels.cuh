@@ -1,5 +1,5 @@
 #pragma once
-#define PI 3.141592653589793
+#define PI 3.141592653589793238462643383279502
 
 __global__ void extendf(float *fe, float *f, int flgl, int flgr, int N, int M, int Nz)
 {
@@ -72,33 +72,6 @@ __global__ void div(float *fn, float *f, float4 *h2, float tau, float lambda1, i
 	fn[id0] -= tau * (h2[idz].w - h2[id].w) / 2;
 }
 
-/*void __global__ copys(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthetas, int Nz)
-{
-        int tx = blockDim.x * blockIdx.x + threadIdx.x;
-        int ty = blockDim.y * blockIdx.y + threadIdx.y;
-        int tz = blockDim.z * blockIdx.z + threadIdx.z;
-
-        if (tx>=N||ty>=Nthetas||tz>=Nz) return;
-        if (flg)//pi to 2pi
-        {
-                if(tx==0)
-                {
-                        g[tx+ty*N+tz*N*Ntheta].x = f[0+ty*N+tz*N*Nthetas].x;
-                        g[tx+ty*N+tz*N*Ntheta].y = f[0+ty*N+tz*N*Nthetas].y;
-                }
-                else
-                {
-                        g[tx+ty*N+tz*N*Ntheta].x = f[N-tx+ty*N+tz*N*Nthetas].x;
-                        g[tx+ty*N+tz*N*Ntheta].y = f[N-tx+ty*N+tz*N*Nthetas].y;
-                }
-        }
-        else//0 to pi
-        {
-                g[tx+ty*N+tz*N*Ntheta].x = f[tx+ty*N+tz*N*Nthetas].x;
-                g[tx+ty*N+tz*N*Ntheta].y = f[tx+ty*N+tz*N*Nthetas].y;
-        }
-}*/
-
 void __global__ copys(float2 *g, float2 *f, int flg, int N, int Ntheta, int Nthetas, int Nz)
 {
 	int tx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -127,35 +100,6 @@ void __global__ copys(float2 *g, float2 *f, int flg, int N, int Ntheta, int Nthe
 	}
 }
 
-/*
-void __global__ adds(float2 *g, float2* f, int flg, int N, int Ntheta, int Nthetas, int Nz)
-{
-	int tx = blockDim.x * blockIdx.x + threadIdx.x;        
-	int ty = blockDim.y * blockIdx.y + threadIdx.y;       
-	int tz = blockDim.z * blockIdx.z + threadIdx.z;        
-	if (tx>=N||ty>=Nthetas||tz>=Nz) return;      
-
-	if (flg)//pi to 2pi
-        {
-                if(tx==0)
-                {
-			g[0+ty*N+tz*N*Nthetas].x += f[tx+ty*N+tz*N*Ntheta].x;
-                        g[0+ty*N+tz*N*Nthetas].y += f[tx+ty*N+tz*N*Ntheta].y;
-                }
-                else
-                {
-                        g[N-tx+ty*N+tz*N*Nthetas].x += f[tx+ty*N+tz*N*Ntheta].x;
-                        g[N-tx+ty*N+tz*N*Nthetas].y += f[tx+ty*N+tz*N*Ntheta].y;
-                }
-        }
-        else//0 to pi
-        {
-                g[tx+ty*N+tz*N*Nthetas].x += f[tx+ty*N+tz*N*Ntheta].x;
-                g[tx+ty*N+tz*N*Nthetas].y += f[tx+ty*N+tz*N*Ntheta].y;
-        }
-
-}
-*/
 void __global__ adds(float2 *g, float2 *f, int flg, int N, int Ntheta, int Nthetas, int Nz)
 {
 	int tx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -314,10 +258,12 @@ void __global__ recphi(float2 *g, float2 *f, float2 *phi, int N, int Ntheta, int
 void __global__ taketheta(float *theta, int Ntheta, int Nrot)
 {
 	int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (tx >= Ntheta / Nrot)
-		return;
+	// if (tx >= Ntheta / Nrot)
+	// 	return;
+	if (tx >= Ntheta)
+		return;		
 
-	theta[tx] = tx / (float)(Ntheta)*PI * Nrot;
+	theta[tx] = tx / (float)(Ntheta)*PI*Nrot;
 }
 
 void __global__ mulphi(float2 *g, float2 *phi, int c, int N, int Ntheta, int Nz)
@@ -379,52 +325,6 @@ void __global__ updateft_ker(float *ftn, float *fn, float *f, int N, int M, int 
 	int id = tx + ty * N + tt * N * N + tz * N * N * M;
 	ftn[id] = 2 * fn[id] - f[id];
 }
-void __global__ radon(float2 *g, float2 *f, float *theta, int N, int Ntheta, int Nz)
-{
-	int tx = blockDim.x * blockIdx.x + threadIdx.x;
-	int ty = blockDim.y * blockIdx.y + threadIdx.y;
-	int tz = blockDim.z * blockIdx.z + threadIdx.z;
-
-	if (tx >= N || ty >= Ntheta || tz >= Nz)
-		return;
-	float2 g0;
-	g0.x = 0;
-	g0.y = 0;
-	float sf = __sinf(theta[ty]);
-	float cf = __cosf(theta[ty]);
-	float x1, x2, a1, a2;
-	int id11, id12, id21, id22;
-	for (int it = 0; it < N; it++)
-	{
-		x1 = (tx - N / 2) * sf - (it - N / 2) * cf;
-		x2 = (tx - N / 2) * cf + (it - N / 2) * sf;
-
-		/*int id1=max(0,min(N-1,(int)round(x1+N/2)));
-		int id2=max(0,min(N-1,(int)round(x2+N/2)));
-
-		g0.x+=f[id1+id2*N+tz*N*N].x;
-		g0.y+=f[id1+id2*N+tz*N*N].y;
-*/
-
-		id11 = max(0, min(N - 1, int(x1 + N / 2)));
-		id12 = max(0, min(N - 1, int(x1 + N / 2) + 1));
-		id21 = max(0, min(N - 1, int(x2 + N / 2)));
-		id22 = max(0, min(N - 1, int(x2 + N / 2) + 1));
-
-		a1 = x1 + N / 2 - int(x1 + N / 2);
-		a2 = x2 + N / 2 - int(x2 + N / 2);
-		g0.x += (1 - a1) * (1 - a2) * f[id11 + id21 * N + tz * N * N].x +
-			a1 * (1 - a2) * f[id12 + id21 * N + tz * N * N].x +
-			(1 - a1) * a2 * f[id11 + id22 * N + tz * N * N].x +
-			a1 * a2 * f[id12 + id22 * N + tz * N * N].x;
-		g0.y += (1 - a1) * (1 - a2) * f[id11 + id21 * N + tz * N * N].y +
-			a1 * (1 - a2) * f[id12 + id21 * N + tz * N * N].y +
-			(1 - a1) * a2 * f[id11 + id22 * N + tz * N * N].y +
-			a1 * a2 * f[id12 + id22 * N + tz * N * N].y;
-	}
-	g[tx + ty * N + tz * N * Ntheta].x = g0.x * 1.0f / (sqrt((float)N * Ntheta));
-	g[tx + ty * N + tz * N * Ntheta].y = g0.y * 1.0f / (sqrt((float)N * Ntheta));
-}
 
 void __global__ takephi(float2 *phi, int Ntheta, int M)
 {
@@ -440,34 +340,4 @@ void __global__ takephi(float2 *phi, int Ntheta, int M)
 		phi[ty * Ntheta + tx].x = 0;
 		phi[ty * Ntheta + tx].y = 0;
 	}
-}
-
-void __global__ radonadj(float2 *f, float2 *g, float *theta, int N, int Ntheta, int Nz)
-{
-	int tx = blockDim.x * blockIdx.x + threadIdx.x;
-	int ty = blockDim.y * blockIdx.y + threadIdx.y;
-	int tz = blockDim.z * blockIdx.z + threadIdx.z;
-
-	float2 f0;
-	f0.x = 0;
-	f0.y = 0;
-	if (tx >= N || ty >= N || tz >= Nz)
-		return;
-	for (int itheta = 0; itheta < Ntheta; itheta++)
-	{
-		float s = (tx - N / 2) * __sinf(theta[itheta]) + (ty - N / 2) * __cosf(theta[itheta]);
-		//		int id1=max(0,min(N-1,(int)round(s+N/2)));
-		//		f0.x+=g[id1+itheta*N+tz*N*Ntheta].x;
-		//		f0.y+=g[id1+itheta*N+tz*N*Ntheta].y;
-
-		int id11 = max(0, min(N - 1, int(s + N / 2)));
-		int id12 = max(0, min(N - 1, int(s + N / 2) + 1));
-		float a1 = s + N / 2 - int(s + N / 2);
-		f0.x += (1 - a1) * g[id11 + itheta * N + tz * N * Ntheta].x +
-			a1 * g[id12 + itheta * N + tz * N * Ntheta].x;
-		f0.y += (1 - a1) * g[id11 + itheta * N + tz * N * Ntheta].y +
-			a1 * g[id12 + itheta * N + tz * N * Ntheta].y;
-	}
-	f[tx + ty * N + tz * N * N].x = f0.x * 1.0f / (sqrtf((float)N * Ntheta));
-	f[tx + ty * N + tz * N * N].y = f0.y * 1.0f / (sqrtf((float)N * Ntheta));
 }

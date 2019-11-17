@@ -19,6 +19,7 @@ class rectv
 
 	//class for applying Radon transform
 	radonusfft **rad;
+	radonusfft **rad2;
 
 	//vars
 	float *f;
@@ -51,10 +52,8 @@ public:
 	~rectv();
 	// Reconstruction by the Chambolle-Pock algorithm with proximal operators	
 	void chambolle(float *fres, float *g, size_t niter);	
-	// Adjoint test for the tomography operators
-	void adjoint_test(float *fres, float *g);	
-
+	
 	// wrappers for python interface
 	void chambolle_wrap(float *fres, int N0, float *g_, int N1, size_t niter);	
-	void adjoint_test_wrap(float *fres, int N0, float *g_, int N1);	
+	
 };

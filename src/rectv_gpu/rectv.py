@@ -72,14 +72,8 @@ class rectv(object):
     def chambolle(self, fres, g, niter):
         return _rectv.rectv_chambolle(self, fres, g, niter)
 
-    def adjoint_test(self, fres, g):
-        return _rectv.rectv_adjoint_test(self, fres, g)
-
     def chambolle_wrap(self, fres, g_, niter):
         return _rectv.rectv_chambolle_wrap(self, fres, g_, niter)
-
-    def adjoint_test_wrap(self, fres, g_):
-        return _rectv.rectv_adjoint_test_wrap(self, fres, g_)
 
 # Register rectv in _rectv:
 _rectv.rectv_swigregister(rectv)

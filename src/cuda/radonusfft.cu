@@ -114,8 +114,6 @@ void radonusfft::adjR(float2 *f_, float2 *g_, float *theta_, bool filter, cudaSt
 	cufftExecC2C(plan1d, (cufftComplex *)g, (cufftComplex *)g, CUFFT_FORWARD);
 	fftshift<<<GS3d3, BS3d, 0, s>>>(g, N, Ntheta, Nz, 0);
 	
-	if (filter)
-		applyfilter<<<GS3d3, BS3d, 0, s>>>(g, N, Ntheta, Nz);
 	// shift with respect to given center	
 	shift <<<GS3d3, BS3d, 0 , s>>> (g, shiftadj, N, Ntheta, Nz);
 	gather<<<GS3d3, BS3d, 0, s>>>(g, fde, x, y, M, mu, N, Ntheta, Nz, TOMO_ADJ);	

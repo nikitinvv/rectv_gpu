@@ -62,15 +62,9 @@ public:
 	~rectv();
 	// Reconstruction by the Chambolle-Pock algorithm with proximal operators
 	void chambolle(float *fres, float *g, size_t niter);
-	// Adjoint test for the tomography operators
-	void adjoint_test(float *fres,float *g);	
 
 // wrappers for python interface
 %apply(float *INPLACE_ARRAY1, int DIM1){(float *fres, int N0)};
 %apply(float *IN_ARRAY1, int DIM1){(float *g_, int N1)};
 	void chambolle_wrap(float *fres, int N0, float *g_, int N1, size_t niter);
-
-%apply(float *INPLACE_ARRAY1, int DIM1){(float *fres, int N0)};
-%apply(float *IN_ARRAY1, int DIM1){(float *g_, int N1)};
-	void adjoint_test_wrap(float *fres, int N0, float *g_, int N1);
 };
