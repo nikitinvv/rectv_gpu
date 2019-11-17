@@ -1,3 +1,4 @@
+#pragma once
 #define PI 3.141592653589793
 
 __global__ void extendf(float *fe, float *f, int flgl, int flgr, int N, int M, int Nz)
