@@ -28,6 +28,8 @@ class rectv
 	float *g;
 	float *h1;
 	float4 *h2;
+	float4 *psi;
+	float4 *mu;
 	float **theta;
 	float2 **phi;
 
@@ -43,18 +45,18 @@ class rectv
 	void divergent(float *fn, float *f, float4 *g, float tau, int igpu, cudaStream_t s);
 	void prox(float *h1, float4 *h2, float *g, float tau, int igpu, cudaStream_t s);
 	void updateft(float *ftn, float *fn, float *f, int igpu, cudaStream_t s);
+	void cg(float *f0, float *fn0, float *h10, float4 *h20, float *g0, float4 *psi0, float4 *mu0, float rho, int iz, int igpu, cudaStream_t s);
 	void solver_chambolle(float *f0, float *fn0, float *ft0, float *ftn0, float *h10, float4 *h20, float *g0, int iz, int igpu, cudaStream_t s);
-	
-	
+	void solver_admm(float *f0, float *fn0, float *h10, float4 *h20, float *g0, float4 *psi0, float4 *mu0, int iz, int igpu, cudaStream_t s);
+
 public:
 	rectv(size_t N, size_t Ntheta, size_t M, size_t Nz, size_t Nzp,
 		  size_t ngpus, float center, float lambda0, float lambda1);
 	~rectv();
 	// Reconstruction by the Chambolle-Pock algorithm with proximal operators
 	void run(float *fres, float *g, float *theta, float *phi, size_t niter);
-	void adjoint_tests(float *g, float* theta, float* phi);
+	void adjoint_tests(float *g, float *theta, float *phi);
 	// wrappers for python interface
 	void run_wrap(float *fres, int N0, float *g, int N1, float *theta, int N2, float *phi, int N3, size_t niter);
 	void adjoint_tests_wrap(float *g, int N1, float *theta, int N2, float *phi, int N3);
-
 };

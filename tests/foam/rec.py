@@ -73,9 +73,9 @@ if __name__ == "__main__":
     rot_center = 252
     nsp = 4  # number of slices to process simultaniously by gpus
     m = 8  # number of basis functions, must be a multiple of nframes
-    lambda0 = pow(2, -9)  # regularization parameter 1
-    lambda1 = pow(2, 2)  # regularization parameter 2
-    niters = 4  # number of iterations
+    lambda0 = pow(2, -3)  # regularization parameter 1
+    lambda1 = pow(2, 0)  # regularization parameter 2
+    niters = 128  # number of iterations
     ngpus = 1  # number of gpus
 
     rtv = rec_tv(data, m, nsp, rot_center, lambda0, lambda1, niters, ngpus)
