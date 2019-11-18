@@ -65,15 +65,21 @@ class rectv(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
 
-    def __init__(self, N, Ntheta, M, Nrot, Nz, Nzp, ngpus, center, lambda0, lambda1):
-        _rectv.rectv_swiginit(self, _rectv.new_rectv(N, Ntheta, M, Nrot, Nz, Nzp, ngpus, center, lambda0, lambda1))
+    def __init__(self, N, Ntheta, M, Nz, Nzp, ngpus, center, lambda0, lambda1):
+        _rectv.rectv_swiginit(self, _rectv.new_rectv(N, Ntheta, M, Nz, Nzp, ngpus, center, lambda0, lambda1))
     __swig_destroy__ = _rectv.delete_rectv
 
-    def chambolle(self, fres, g, niter):
-        return _rectv.rectv_chambolle(self, fres, g, niter)
+    def run(self, fres, g, theta, phi, niter):
+        return _rectv.rectv_run(self, fres, g, theta, phi, niter)
 
-    def chambolle_wrap(self, fres, g_, niter):
-        return _rectv.rectv_chambolle_wrap(self, fres, g_, niter)
+    def adjoint_tests(self, g, theta, phi):
+        return _rectv.rectv_adjoint_tests(self, g, theta, phi)
+
+    def run_wrap(self, fres, g, theta, phi, niter):
+        return _rectv.rectv_run_wrap(self, fres, g, theta, phi, niter)
+
+    def adjoint_tests_wrap(self, g, theta, phi):
+        return _rectv.rectv_adjoint_tests_wrap(self, g, theta, phi)
 
 # Register rectv in _rectv:
 _rectv.rectv_swigregister(rectv)

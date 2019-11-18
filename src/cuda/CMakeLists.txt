@@ -16,7 +16,7 @@ include_directories(${PYTHON_INCLUDE_PATH})
 
 # Must tell CMake that SWIG interface files are CXX files
 set_source_files_properties(rectv.i PROPERTIES CPLUSPLUS ON)
-swig_add_library(rectv LANGUAGE python SOURCES rectv.i rectv.cu radonusfft.cu)
+swig_add_library(rectv LANGUAGE python SOURCES rectv.i rectv.cu radonusfft.cu chambolle.cu admm.cu operators.cu)
 swig_link_libraries(rectv cudart cufft gomp)
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rectv.py" DESTINATION rectv_gpu)

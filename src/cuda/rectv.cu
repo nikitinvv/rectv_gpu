@@ -1,20 +1,17 @@
 #include <stdio.h>
 #include <omp.h>
 #include "rectv.cuh"
-#include "kernels.cuh"
 
-rectv::rectv(size_t N_, size_t Ntheta_, size_t M_, size_t Nrot_, size_t Nz_, size_t Nzp_, size_t ngpus_, float center, float lambda0_, float lambda1_)
+rectv::rectv(size_t N_, size_t Ntheta_, size_t M_, size_t Nz_, size_t Nzp_, size_t ngpus_, float center, float lambda0_, float lambda1_)
 {
 	N = N_;
 	Ntheta = Ntheta_;
 	M = M_;
-	Nrot = Nrot_;
 	Nz = Nz_;
 	Nzp = Nzp_;
 	lambda0 = lambda0_;
 	lambda1 = lambda1_;
 	ngpus = min(ngpus_, (size_t)(Nz / Nzp));
-	tau = 1 / sqrt(1 + 1 + lambda1 * lambda1 + (Nz != 0)); //sqrt norm of K1^*K1+K2^*K2
 	omp_set_num_threads(ngpus);
 	//Managed memory on GPU
 	cudaMallocManaged((void **)&f, N * N * M * Nz * sizeof(float));
@@ -31,31 +28,28 @@ rectv::rectv(size_t N_, size_t Ntheta_, size_t M_, size_t Nrot_, size_t Nz_, siz
 	ftmp = new float *[ngpus];
 	gtmp = new float *[ngpus];
 	ftmps = new float *[ngpus];
-	gtmps = new float *[ngpus];
 	phi = new float2 *[ngpus];
 	theta = new float *[ngpus];
 
-	dim3 BS2d(32, 32);
-	dim3 GS2d0(ceil(Ntheta / (float)BS2d.x), ceil(M / (float)BS2d.y));
+	BS2d = dim3(32, 32);
+	BS3d = dim3(32, 32, 1);
+	GS2d0 = dim3(ceil(Ntheta / (float)BS2d.x), ceil(M / (float)BS2d.y));
+
+	GS3d0 = dim3(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(Nzp * M / (float)BS3d.z));
+	GS3d1 = dim3(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
+	GS3d2 = dim3(ceil(N / (float)BS3d.x), ceil(Ntheta / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
+	GS3d3 = dim3(ceil((N + 2) / (float)BS3d.x), ceil((N + 2) / (float)BS3d.y), ceil((M + 2) * (Nzp + 2) / (float)BS3d.z));
+	GS3d4 = dim3(ceil((N + 1) / (float)BS3d.x), ceil((N + 1) / (float)BS3d.y), ceil((M + 1) * (Nzp + 1) / (float)BS3d.z));
 
 	for (int igpu = 0; igpu < ngpus; igpu++)
 	{
 		cudaSetDevice(igpu);
-		rad[igpu] = new radonusfft(N, Ntheta, Nzp, center);		
-		rad2[igpu] = new radonusfft(N, Ntheta/Nrot, Nzp, center);		
+		rad[igpu] = new radonusfft(N, Ntheta, Nzp, center);
 		cudaMalloc((void **)&ftmp[igpu], 2 * (N + 2) * (N + 2) * (M + 2) * (Nzp + 2) * sizeof(float));
 		cudaMalloc((void **)&gtmp[igpu], 2 * N * Ntheta * Nzp * sizeof(float));
 		cudaMalloc((void **)&ftmps[igpu], 2 * N * N * Nzp * sizeof(float));
-		cudaMalloc((void **)&gtmps[igpu], 2 * N * Ntheta / Nrot * Nzp * sizeof(float));
-		cudaMalloc((void **)&phi[igpu], Ntheta * M * sizeof(float2));
-		//cudaMalloc((void **)&theta[igpu], Ntheta / Nrot * sizeof(float));
-		cudaMalloc((void **)&theta[igpu], Ntheta * sizeof(float));
-
-		//angles [0,pi]
-		//taketheta<<<ceil(Ntheta / Nrot / 1024.0), 1024>>>(theta[igpu], Ntheta, Nrot);
-		printf("%d",Ntheta);
-		taketheta<<<ceil(Ntheta / 1024.0), 1024>>>(theta[igpu], Ntheta, Nrot);
-		takephi<<<GS2d0, BS2d>>>(phi[igpu], Ntheta, M);
+		cudaMalloc((void **)&phi[igpu], 2 * Ntheta * M * sizeof(float));
+		cudaMalloc((void **)&theta[igpu], Ntheta * sizeof(float));		
 	}
 	cudaDeviceSynchronize();
 }
@@ -73,164 +67,26 @@ rectv::~rectv()
 	{
 		cudaSetDevice(igpu);
 		delete rad[igpu];
-		delete rad2[igpu];
 		cudaFree(ftmp[igpu]);
 		cudaFree(gtmp[igpu]);
 		cudaFree(ftmps[igpu]);
-		cudaFree(gtmps[igpu]);
 		cudaFree(phi[igpu]);
 		cudaFree(theta[igpu]);
 		cudaDeviceReset();
 	}
 }
 
-void rectv::radonapr(float *g, float *f, int igpu, cudaStream_t s)
-{
-	//tmp arrays on gpus
-	float2 *ftmp0 = (float2 *)ftmp[igpu];
-	float2 *ftmps0 = (float2 *)ftmps[igpu];
-	float2 *gtmp0 = (float2 *)gtmp[igpu];
-	float2 *gtmps0 = (float2 *)gtmps[igpu];
-	float2 *phi0 = (float2 *)phi[igpu];
-	float *theta0 = (float *)theta[igpu];
-
-	cudaMemsetAsync(ftmp0, 0, 2 * N * N * M * Nzp * sizeof(float), s);
-	cudaMemsetAsync(ftmps0, 0, 2 * N * N * Nzp * sizeof(float), s);
-	cudaMemsetAsync(gtmp0, 0, 2 * N * Ntheta * Nzp * sizeof(float), s);
-	cudaMemsetAsync(gtmps0, 0, 2 * N * Ntheta / Nrot * Nzp * sizeof(float), s);
-
-	dim3 BS3d(32, 32, 1);
-	dim3 GS3d0(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(Nzp * M / (float)BS3d.z));
-	dim3 GS3d1(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
-	dim3 GS3d2(ceil(N / (float)BS3d.x), ceil(Ntheta / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
-	//switch to complex numbers
-	makecomplexf<<<GS3d0, BS3d, 0, s>>>(ftmp0, f, N, M, Nzp);
-	cudaMemset((void **)&gtmps0, 0, 2 * N * Ntheta / Nrot * Nzp * sizeof(float));
-	cudaMemset((void **)&gtmp0, 0, 2 * N * Ntheta * Nzp * sizeof(float));
-	for (int i = 0; i < M; i++)
-	{
-		//decompositon coefficients
-		decphi<<<GS3d1, BS3d, 0, s>>>(ftmps0, ftmp0, &phi0[i * Ntheta], N, Ntheta, M, Nzp);
-		rad[igpu]->fwdR(gtmp0, ftmps0, theta0, s);
-		// for (int k = 0; k < Nrot; k++)
-		// 	copys<<<GS3d2, BS3d, 0, s>>>(&gtmp0[k * N * Ntheta / Nrot], gtmps0, k % 2, N, Ntheta, Ntheta / Nrot, Nzp);		
-		
-		// //constant for normalization
-		mulc<<<GS3d2, BS3d, 0, s>>>(gtmp0, 1.0f / sqrt(M) * Ntheta / sqrt(Nrot), N, Ntheta, Nzp);		
-		//multiplication by basis functions
-		mulphi<<<GS3d2, BS3d, 0, s>>>(gtmp0, &phi0[i * Ntheta], 1, N, Ntheta, Nzp); //-1 conj
-		//sum up
-		addg<<<GS3d2, BS3d, 0, s>>>(g, gtmp0, tau, N, Ntheta, Nzp);
-	}
-}
-
-void rectv::radonapradj(float *f, float *g, int igpu, cudaStream_t s)
-{
-	//tmp arrays on gpus
-	float2 *ftmp0 = (float2 *)ftmp[igpu];
-	float2 *ftmps0 = (float2 *)ftmps[igpu];
-	float2 *gtmp0 = (float2 *)gtmp[igpu];
-	float2 *gtmps0 = (float2 *)gtmps[igpu];
-	float2 *phi0 = (float2 *)phi[igpu];
-	float *theta0 = (float *)theta[igpu];
-
-	cudaMemsetAsync(ftmp0, 0, 2 * N * N * M * Nzp * sizeof(float), s);
-	cudaMemsetAsync(ftmps0, 0, 2 * N * N * Nzp * sizeof(float), s);
-	cudaMemsetAsync(gtmp0, 0, 2 * N * Ntheta * Nzp * sizeof(float), s);
-	cudaMemsetAsync(gtmps0, 0, 2 * N * Ntheta / Nrot * Nzp * sizeof(float), s);
-
-	dim3 BS3d(32, 32, 1);
-	dim3 GS3d0(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(Nzp * M / (float)BS3d.z));
-	dim3 GS3d1(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
-	dim3 GS3d2(ceil(N / (float)BS3d.x), ceil(Ntheta / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
-	for (int i = 0; i < M; i++)
-	{
-		//switch to complex numbers
-		makecomplexR<<<GS3d2, BS3d, 0, s>>>(gtmp0, g, N, Ntheta, Nzp);
-		//multiplication by conjugate basis functions
-		mulphi<<<GS3d2, BS3d, 0, s>>>(gtmp0, &phi0[i * Ntheta], -1, N, Ntheta, Nzp); //-1 conj
-		//constant for normalization
-		mulc<<<GS3d2, BS3d, 0, s>>>(gtmp0, 1.0f / sqrt(M) * Ntheta / sqrt(Nrot), N, Ntheta, Nzp);
-		//gather Radon data over all angles
-		// cudaMemsetAsync(gtmps0, 0, 2 * N * Ntheta / Nrot * Nzp * sizeof(float), s);
-		// for (int k = 0; k < Nrot; k++)
-		// 	adds<<<GS3d2, BS3d, 0, s>>>(gtmps0, &gtmp0[k * N * Ntheta / Nrot], k % 2, N, Ntheta, Ntheta / Nrot, Nzp);
-		// rad[igpu]->adjR(ftmps0, gtmps0, theta0, 0, s);
-		
-		rad[igpu]->adjR(ftmps0, gtmp0, theta0, 0, s);
-
-		//recovering by coefficients
-		recphi<<<GS3d1, BS3d, 0, s>>>(ftmp0, ftmps0, &phi0[i * Ntheta], N, Ntheta, M, Nzp);
-	}
-	addf<<<GS3d0, BS3d, 0, s>>>(f, ftmp0, tau, N, M, Nzp);
-}
-
-void rectv::gradient(float4 *h2, float *ft, int iz, int igpu, cudaStream_t s)
-{
-	dim3 BS3d(32, 32, 1);
-	dim3 GS3d0(ceil((N + 2) / (float)BS3d.x), ceil((N + 2) / (float)BS3d.y), ceil((M + 2) * (Nzp + 2) / (float)BS3d.z));
-	float *ftmp0 = ftmp[igpu];
-	//repeat border values
-	extendf<<<GS3d0, BS3d, 0, s>>>(ftmp0, ft, iz != 0, iz != Nz / Nzp - 1, N + 2, M + 2, Nzp + 2);
-	grad<<<GS3d0, BS3d, 0, s>>>(h2, ftmp0, tau, lambda1, N + 1, M + 1, Nzp + 1);
-}
-
-void rectv::divergent(float *fn, float *f, float4 *h2, int igpu, cudaStream_t s)
-{
-	dim3 BS3d(32, 32, 1);
-	dim3 GS3d0(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(M * Nzp / (float)BS3d.z));
-	div<<<GS3d0, BS3d, 0, s>>>(fn, f, h2, tau, lambda1, N, M, Nzp);
-}
-
-void rectv::radonfbp(float *f, float *g, int igpu, cudaStream_t s)
-{
-	//tmp arrays on gpus
-	float2 *ftmp0 = (float2 *)ftmp[igpu];
-	float2 *gtmp0 = (float2 *)gtmp[igpu];
-	float2 *gtmps0 = (float2 *)gtmps[igpu];
-	float *theta0 = (float *)theta[igpu];
-
-	cudaMemsetAsync(gtmp0, 0, 2 * N * Ntheta * Nzp * sizeof(float), s);
-	dim3 BS3d(32, 32, 1);
-	dim3 GS3d0(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(Nzp * M / (float)BS3d.z));
-	dim3 GS3d1(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
-	dim3 GS3d2(ceil(N / (float)BS3d.x), ceil(Ntheta / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
-
-	//switch to complex numbers
-	makecomplexR<<<GS3d2, BS3d, 0, s>>>(gtmp0, g, N, Ntheta, Nzp);
-	for (int k = 0; k < Nrot; k++)
-	{
-		cudaMemsetAsync(gtmps0, 0, 2 * N * Ntheta / Nrot * Nzp * sizeof(float), s);
-		adds<<<GS3d2, BS3d, 0, s>>>(gtmps0, &gtmp0[k * N * Ntheta / Nrot], k % 2, N, Ntheta, Ntheta / Nrot, Nzp);
-		//adjoint Radon tranform for [0,pi) interval
-		rad2[igpu]->adjR(ftmp0, gtmps0, theta0, 1, s); //filter=1
-		makerealstepf<<<GS3d1, BS3d, 0, s>>>(&f[N * N * k], ftmp0, N, Nrot, Nzp);
-	}
-	//constant for fidelity
-	mulr<<<GS3d0, BS3d, 0, s>>>(f, 1 / sqrt(2 * M / (float)Nrot), N, M, Nzp);
-}
-
-
-void rectv::prox(float *h1, float4 *h2, float *g, int igpu, cudaStream_t s)
-{
-	dim3 BS3d(32, 32, 1);
-	dim3 GS3d0(ceil((N + 1) / (float)BS3d.x), ceil((N + 1) / (float)BS3d.y), ceil((M + 1) * (Nzp + 1) / (float)BS3d.z));
-	dim3 GS3d1(ceil(N / (float)BS3d.x), ceil(Ntheta / (float)BS3d.y), ceil(Nzp / (float)BS3d.z));
-	prox1<<<GS3d1, BS3d, 0, s>>>(h1, g, tau, N, Ntheta, Nzp);
-	prox2<<<GS3d0, BS3d, 0, s>>>(h2, lambda0, N + 1, M + 1, Nzp + 1);
-}
-
-void rectv::updateft(float *ftn, float *fn, float *f, int igpu, cudaStream_t s)
-{
-	dim3 BS3d(32, 32, 1);
-	dim3 GS3d0(ceil(N / (float)BS3d.x), ceil(N / (float)BS3d.y), ceil(M * Nzp / (float)BS3d.z));
-	updateft_ker<<<GS3d0, BS3d, 0, s>>>(ftn, fn, f, N, M, Nzp);
-}
-
-void rectv::chambolle(float *fres, float *g_, size_t niter)
+void rectv::run(float *fres, float *g_, float *theta_, float *phi_, size_t niter)
 {
 	//data
 	cudaMemcpy(g, g_, N * Ntheta * Nz * sizeof(float), cudaMemcpyHostToHost);
+	//angles and basis functions to each gpu
+	for (int igpu = 0; igpu < ngpus; igpu++)
+	{
+		cudaSetDevice(igpu);
+		cudaMemcpy(theta[igpu], theta_, Ntheta * sizeof(float), cudaMemcpyDefault);
+		cudaMemcpy(phi[igpu], phi_, 2 * Ntheta * M * sizeof(float), cudaMemcpyDefault);
+	}
 	//initial guess
 	memset(f, 0, N * N * M * Nz * sizeof(float));
 	memset(ft, 0, N * N * M * Nz * sizeof(float));
@@ -278,24 +134,15 @@ void rectv::chambolle(float *fres, float *g_, size_t niter)
 			float *h10s = h10;
 			float4 *h20s = h20;
 			float *g0s = g0;
-#pragma omp for
+#pragma omp forrectv
 			for (int iz = 0; iz < Nz / Nzp; iz++)
 			{
 				cudaEventSynchronize(e1);
 				cudaEventSynchronize(e2);
 
-				//forward step
-				gradient(h20, ft0, iz, igpu, s1); //iz for border control
-				radonapr(h10, ft0, igpu, s1);
-				//proximal
-				prox(h10, h20, g0, igpu, s1);
-				//backward step
-				divergent(fn0, f0, h20, igpu, s1);
-				radonapradj(fn0, h10, igpu, s1);
-				//update ft
-				updateft(ftn0, fn0, f0, igpu, s1);
-				cudaEventRecord(e1, s1);
+				solver_chambolle(f0, fn0, ft0, ftn0, h10, h20, g0, iz, igpu, s1);
 
+				cudaEventRecord(e1, s1);
 				if (iz < (igpu + 1) * Nz / Nzp / ngpus - 1)
 				{
 					// make sure the stream is idle to force non-deferred HtoD prefetches first
@@ -364,9 +211,9 @@ void rectv::chambolle(float *fres, float *g_, size_t niter)
 				float norm[2] = {};
 				for (int k = 0; k < N * Ntheta * Nz; k++)
 					norm[0] += (h1[k] - g[k]) * (h1[k] - g[k]);
-				for (int k = 0; k <(N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * Nz / Nzp ; k++)
+				for (int k = 0; k < (N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * Nz / Nzp; k++)
 					norm[1] += sqrt(h2[k].x * h2[k].x + h2[k].y * h2[k].y + h2[k].z * h2[k].z + h2[k].w * h2[k].w);
-				fprintf(stderr, "iterations (%d/%d) f:%f, r:%f, total:%f\n", iter, niter, norm[0], lambda0*norm[1], norm[0] + lambda0*norm[1]);
+				fprintf(stderr, "iterations (%d/%d) f:%f, r:%f, total:%f\n", iter, niter, norm[0], lambda0 * norm[1], norm[0] + lambda0 * norm[1]);
 				fflush(stdout);
 			}
 		}
@@ -376,36 +223,10 @@ void rectv::chambolle(float *fres, float *g_, size_t niter)
 	float end = omp_get_wtime();
 	printf("Elapsed time: %fs.\n", end - start);
 	cudaMemPrefetchAsync(ft, N * N * M * Nz * sizeof(float), cudaCpuDeviceId, 0);
-	float mcons = sqrt((float)M / Nrot / 4);
-	for (int i = 0; i < N * N * M * Nz; i++)
-		ft[i] *= mcons;
 	cudaMemcpy(fres, ft, N * N * M * Nz * sizeof(float), cudaMemcpyDefault);
 }
 
-
-void rectv::chambolle_wrap(float *fres, int N0, float *g_, int N1, size_t niter)
+void rectv::run_wrap(float *fres, int N0, float *g, int N1, float *theta, int N2, float *phi, int N3, size_t niter)
 {
-	chambolle(fres, g_, niter);
+	run(fres, g, theta, phi, niter);
 }
-
-
-
-
-
-
-
-
-
-
-// float2* gt;
-		// float2* t1 = new float2[Ntheta*Nz*N];
-		// float2* t2 = new float2[Ntheta*Nz*N];
-		// cudaMalloc((void **)&gt, Ntheta * Nz *N * sizeof(float2));	
-		// rad2[igpu]->fwdR(gt, ftmps0, theta0, s);
-		// cudaMemcpy(t1,gt,Ntheta * Nz *N * sizeof(float2),cudaMemcpyDefault);
-		// cudaMemcpy(t2,gtmp0,Ntheta * Nz *N * sizeof(float2),cudaMemcpyDefault);
-		// double norm=0;
-		// for(int k=0;k<Ntheta*Nz*N;k++)
-		// 	norm+=(t1[k].x-t2[k].x)*(t1[k].y-t2[k].y);
-		// printf("%f\n",norm);
-		
