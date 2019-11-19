@@ -129,7 +129,8 @@ void rectv::run(float *fres, float *g_, float *theta_, float *phi_, size_t niter
 			cudaMemPrefetchAsync(f0, N * N * M * Nzp * sizeof(float), igpu, s2);																	//mem+=N*N*M*Nzp*sizeof(float);
 			cudaMemPrefetchAsync(fn0, N * N * M * Nzp * sizeof(float), igpu, s2);																	//mem+=N*N*M*Nzp*sizeof(float);
 			cudaMemPrefetchAsync(&ft0[-(iz != 0) * N * N * M], N * N * M * (Nzp + 2 - (iz == 0) - (iz == Nz / Nzp - 1)) * sizeof(float), igpu, s2); //mem+=N*N*M*(Nzp+2-(iz==0)-(iz==Nz/Nzp-1))*sizeof(float);
-			cudaMemPrefetchAsync(ftn0, N * N * M * Nzp * sizeof(float), igpu, s2);																	//mem+=N*N*M*Nzp*sizeof(float);
+			cudaMemPrefetchAsync(&ftn0[-(iz != 0) * N * N * M], N * N * M * (Nzp + 2 - (iz == 0) - (iz == Nz / Nzp - 1)) * sizeof(float), igpu, s2); //mem+=N*N*M*(Nzp+2-(iz==0)-(iz==Nz/Nzp-1))*sizeof(float);
+			// cudaMemPrefetchAsync(ftn0, N * N * M * Nzp * sizeof(float), igpu, s2);																	//mem+=N*N*M*Nzp*sizeof(float);
 			cudaMemPrefetchAsync(h10, N * Ntheta * Nzp * sizeof(float), igpu, s2);																	//mem+=N*Ntheta*Nzp*sizeof(float);
 			cudaMemPrefetchAsync(h20, (N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * sizeof(float4), igpu, s2);											//mem+=(N+1)*(N+1)*(M+1)*(Nzp+1)*sizeof(float4);
 			cudaMemPrefetchAsync(psi0, (N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * sizeof(float4), igpu, s2);											//mem+=(N+1)*(N+1)*(M+1)*(Nzp+1)*sizeof(float4);
@@ -146,14 +147,14 @@ void rectv::run(float *fres, float *g_, float *theta_, float *phi_, size_t niter
 			float4 *psi0s = psi0;
 			float4 *mu0s = mu0;
 			float *g0s = g0;
-#pragma omp forrectv
+#pragma omp for
 			for (int iz = 0; iz < Nz / Nzp; iz++)
 			{
 				cudaEventSynchronize(e1);
 				cudaEventSynchronize(e2);
 
 				// solver_chambolle(f0, fn0, ft0, ftn0, h10, h20, g0, iz, igpu, s1);
-				solver_admm(f0, fn0, h10, h20, g0, psi0, mu0, iz, igpu, s1);
+				solver_admm(ft0, ftn0, h10, h20, g0, psi0, mu0, iz, igpu, s1);
 
 				cudaEventRecord(e1, s1);
 				if (iz < (igpu + 1) * Nz / Nzp / ngpus - 1)
@@ -173,7 +174,8 @@ void rectv::run(float *fres, float *g_, float *theta_, float *phi_, size_t niter
 					cudaMemPrefetchAsync(f0s, N * N * M * Nzp * sizeof(float), igpu, s2);											//mem+=N*N*M*Nzp*sizeof(float);
 					cudaMemPrefetchAsync(fn0s, N * N * M * Nzp * sizeof(float), igpu, s2);											//mem+=N*N*M*Nzp*sizeof(float);
 					cudaMemPrefetchAsync(&ft0s[N * N * M], N * N * M * (Nzp - (iz + 1 == Nz / Nzp - 1)) * sizeof(float), igpu, s2); //mem+=N*N*M*(Nzp-(iz+1==Nz/Nzp-1))*sizeof(float);
-					cudaMemPrefetchAsync(ftn0s, N * N * M * Nzp * sizeof(float), igpu, s2);											//mem+=N*N*M*Nzp*sizeof(float);
+					cudaMemPrefetchAsync(&ftn0s[N * N * M], N * N * M * (Nzp - (iz + 1 == Nz / Nzp - 1)) * sizeof(float), igpu, s2); //mem+=N*N*M*(Nzp-(iz+1==Nz/Nzp-1))*sizeof(float);
+					// cudaMemPrefetchAsync(ftn0s, N * N * M * Nzp * sizeof(float), igpu, s2);											//mem+=N*N*M*Nzp*sizeof(float);
 					cudaMemPrefetchAsync(h10s, N * Ntheta * Nzp * sizeof(float), igpu, s2);											//mem+=N*Ntheta*Nzp*sizeof(float);
 					cudaMemPrefetchAsync(h20s, (N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * sizeof(float4), igpu, s2);					//mem+=(N+1)*(N+1)*(M+1)*(Nzp+1)*sizeof(float4);
 					cudaMemPrefetchAsync(psi0s, (N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * sizeof(float4), igpu, s2);					//mem+=(N+1)*(N+1)*(M+1)*(Nzp+1)*sizeof(float4);
@@ -186,8 +188,9 @@ void rectv::run(float *fres, float *g_, float *theta_, float *phi_, size_t niter
 				cudaMemPrefetchAsync(f0, N * N * M * Nzp * sizeof(float), cudaCpuDeviceId, s1);																												   //mem+=N*N*M*Nzp*sizeof(float);
 				cudaMemPrefetchAsync(fn0, N * N * M * Nzp * sizeof(float), cudaCpuDeviceId, s1);																											   //mem+=N*N*M*Nzp*sizeof(float);
 				cudaMemPrefetchAsync(&ft0[-(iz != 0) * N * N * M], N * N * M * (Nzp - (iz == 0) - (iz == Nz / Nzp - 1) + 2 * (iz == (igpu + 1) * Nz / Nzp / ngpus - 1)) * sizeof(float), cudaCpuDeviceId, s1); //mem+= N*N*M*(Nzp-(iz==0)-(iz==Nz/Nzp-1)+2*(iz==(igpu+1)*Nz/Nzp/ngpus-1))*sizeof(float);
+				cudaMemPrefetchAsync(&ftn0[-(iz != 0) * N * N * M], N * N * M * (Nzp - (iz == 0) - (iz == Nz / Nzp - 1) + 2 * (iz == (igpu + 1) * Nz / Nzp / ngpus - 1)) * sizeof(float), cudaCpuDeviceId, s1); //mem+= N*N*M*(Nzp-(iz==0)-(iz==Nz/Nzp-1)+2*(iz==(igpu+1)*Nz/Nzp/ngpus-1))*sizeof(float);
 
-				cudaMemPrefetchAsync(ftn0, N * N * M * Nzp * sizeof(float), cudaCpuDeviceId, s1);						  //mem+=N*N*M*Nzp*sizeof(float);
+				// cudaMemPrefetchAsync(ftn0, N * N * M * Nzp * sizeof(float), cudaCpuDeviceId, s1);						  //mem+=N*N*M*Nzp*sizeof(float);
 				cudaMemPrefetchAsync(h10, N * Ntheta * Nzp * sizeof(float), cudaCpuDeviceId, s1);						  //mem+=N*Ntheta*Nzp*sizeof(float);
 				cudaMemPrefetchAsync(h20, (N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * sizeof(float4), cudaCpuDeviceId, s1); //mem+=(N+1)*(N+1)*(M+1)*(Nzp+1)*sizeof(float4);
 				cudaMemPrefetchAsync(g0, N * Ntheta * Nzp * sizeof(float), cudaCpuDeviceId, s1);						  //mem+=N*Ntheta*Nzp*sizeof(float);
@@ -222,8 +225,6 @@ void rectv::run(float *fres, float *g_, float *theta_, float *phi_, size_t niter
 				float *tmp = 0;				
 				tmp = ft;
 				ft = ftn;
-				// cudaMemcpyAsync(ft, ftn, N * N * Nzp * M * sizeof(float), cudaMemcpyDefault, 0);
-				// cudaMemcpyAsync(f, fn, N * N * Nzp * M * sizeof(float), cudaMemcpyDefault, 0);
 				ftn = tmp;
 				tmp = f;
 				f = fn;

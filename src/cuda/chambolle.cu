@@ -46,14 +46,15 @@ void __global__ updateft_ker(float *ftn, float *fn, float *f, int N, int M, int 
 }
 
 void rectv::prox(float *h1, float4 *h2, float *g, float tau, int igpu, cudaStream_t s)
-{	
+{
+	
 	prox1<<<GS3d2, BS3d, 0, s>>>(h1, g, tau, N, Ntheta, Nzp);
 	prox2<<<GS3d4, BS3d, 0, s>>>(h2, lambda0, N + 1, M + 1, Nzp + 1);
 }
 
-void rectv::updateft(float *ftn, float *fn, float *f, int igpu, cudaStream_t s)
+void rectv::updateft(float *ftn, float *fn, float *f, float tau, int igpu, cudaStream_t s)
 {
-	updateft_ker<<<GS3d0, BS3d, 0, s>>>(ftn, fn, f, N, M, Nzp);
+		updateft_ker<<<GS3d0, BS3d, 0, s>>>(ftn, fn, f, N, M, Nzp);
 }
 
 void rectv::solver_chambolle(float *f0, float *fn0, float *ft0, float *ftn0, float *h10, float4 *h20, float *g0,  int iz, int igpu, cudaStream_t s)
@@ -68,5 +69,5 @@ void rectv::solver_chambolle(float *f0, float *fn0, float *ft0, float *ftn0, flo
 	divergent(fn0, f0, h20, tau, igpu, s);
 	radonapradj(fn0, h10, tau, igpu, s);
 	//update ft
-	updateft(ftn0, fn0, f0, igpu, s);
+	updateft(ftn0, fn0, f0, tau, igpu, s);	
 }

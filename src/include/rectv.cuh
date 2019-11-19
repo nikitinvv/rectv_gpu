@@ -44,10 +44,12 @@ class rectv
 	void gradient(float4 *g, float *f, float tau, int iz, int igpu, cudaStream_t s);
 	void divergent(float *fn, float *f, float4 *g, float tau, int igpu, cudaStream_t s);
 	void prox(float *h1, float4 *h2, float *g, float tau, int igpu, cudaStream_t s);
-	void updateft(float *ftn, float *fn, float *f, int igpu, cudaStream_t s);
-	void cg(float *f0, float *fn0, float *h10, float4 *h20, float *g0, float4 *psi0, float4 *mu0, float rho, int iz, int igpu, cudaStream_t s);
+	void updateft(float *ftn, float *fn, float *f,float tau,int igpu, cudaStream_t s);
+	void updatemu(float4* mu, float4* h2, float4* psi, float rho, cudaStream_t s);
+	void cg(float *f0, float *fn0, float *h10, float4 *h20, float *g0, float4 *psi0, float4 *mu0, float rho, int iz, int niter, int igpu, cudaStream_t s);
 	void solver_chambolle(float *f0, float *fn0, float *ft0, float *ftn0, float *h10, float4 *h20, float *g0, int iz, int igpu, cudaStream_t s);
-	void solver_admm(float *f0, float *fn0, float *h10, float4 *h20, float *g0, float4 *psi0, float4 *mu0, int iz, int igpu, cudaStream_t s);
+	void solver_admm(float *ft0, float *ftn0, float *h10, float4 *h20, float *g0, float4 *psi0, float4 *mu0, int iz, int igpu, cudaStream_t s);
+	void solve_reg(float4* psi, float4* h2, float4* mu, float lambda, float rho, cudaStream_t s);
 
 public:
 	rectv(size_t N, size_t Ntheta, size_t M, size_t Nz, size_t Nzp,

@@ -33,7 +33,7 @@ def rec_tv(data, m, nsp, rot_center,
 
     # Make a class for tv
     cl = rectv_gpu.rectv(n, nframes*nproj, m, ns,
-                         ns, ngpus, rot_center, lambda0, lambda1)
+                         nsp, ngpus, rot_center, lambda0, lambda1)
     theta = np.linspace(0, nframes*np.pi, nframes*nproj, endpoint=False).astype('float32')
     phi = takephi(m, nframes*nproj).flatten()
     # Run iterations
@@ -71,11 +71,11 @@ if __name__ == "__main__":
 
     data = np.load("data.npy")  # load continuous data
     rot_center = 252
-    nsp = 4  # number of slices to process simultaniously by gpus
+    nsp = 2  # number of slices to process simultaniously by gpus
     m = 8  # number of basis functions, must be a multiple of nframes
     lambda0 = pow(2, -3)  # regularization parameter 1
     lambda1 = pow(2, 0)  # regularization parameter 2
-    niters = 128  # number of iterations
+    niters = 4  # number of iterations
     ngpus = 1  # number of gpus
 
     rtv = rec_tv(data, m, nsp, rot_center, lambda0, lambda1, niters, ngpus)
