@@ -71,12 +71,12 @@ if __name__ == "__main__":
 
     data = np.load("data.npy")  # load continuous data
     rot_center = 252
-    nsp = 2  # number of slices to process simultaniously by gpus
+    nsp = 1  # number of slices to process simultaniously by gpus
     m = 8  # number of basis functions, must be a multiple of nframes
     lambda0 = pow(2, -3)  # regularization parameter 1
     lambda1 = pow(2, 0)  # regularization parameter 2
     niters = 4  # number of iterations
-    ngpus = 1  # number of gpus
+    ngpus = 4  # number of gpus
 
     rtv = rec_tv(data, m, nsp, rot_center, lambda0, lambda1, niters, ngpus)
     print(np.linalg.norm(rtv))

@@ -9,6 +9,12 @@ __pycache__/
 # C extensions
 *.so
 
+# skbuild
+_skbuild/
+
+# nfs
+.nfs*
+
 # Distribution / packaging
 .Python
 build/

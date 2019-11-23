@@ -12,7 +12,6 @@ CMakeLists.txt for the curent list of build options.
 """
 from skbuild import setup
 from setuptools import find_packages
-
 setup(
     name='rectv_gpu',
     author='Viktor Nikitin',

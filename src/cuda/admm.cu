@@ -78,15 +78,11 @@ __global__ void solve_reg_ker(float4* psi, float4 *h2, float4* mu, float lambda,
 
 void rectv::cg(float *ft0, float *ftn0, float *h10, float4 *h20, float *g0, float4 *psi0, float4 *mu0, float rho, int iz, int niter, int igpu, cudaStream_t s)       
 {
-    // cudaMemcpyAsync(ftn0, ft0, N * N * Nzp * M * sizeof(float), cudaMemcpyDefault, s);
-    float* t1 = &ftn0[-(iz != 0) * N * N * M];
-    float* t2 = &ft0[-(iz != 0) * N * N * M];
-    cudaMemcpy(t1, t2,N*N*(Nzp + 2 - (iz == 0) - (iz == Nz / Nzp - 1))*M* sizeof(float), cudaMemcpyDefault); //mem+=N*N*M*(Nzp+2-(iz==0)-(iz==Nz/Nzp-1))*sizeof(float);
+    cudaMemcpyAsync(ftn0, ft0, N * N * Nzp * M * sizeof(float), cudaMemcpyDefault, s);
+    // float* t1 = &ftn0[-(iz != 0) * N * N * M];
+    // float* t2 = &ft0[-(iz != 0) * N * N * M];
+    // cudaMemcpy(t1, t2,N*N*(Nzp + 2 - (iz == 0) - (iz == Nz / Nzp - 1))*M* sizeof(float), cudaMemcpyDefault); //mem+=N*N*M*(Nzp+2-(iz==0)-(iz==Nz/Nzp-1))*sizeof(float);
     
-    
-    // for( int i=0;i<N*N*(Nzp + 2 - (iz == 0) - (iz == Nz / Nzp - 1))*M;i++) norm+=ft0[-(iz != 0) * N * N * M+i];
-    // printf("%f\n",norm);
-    // // ft0 = ftn0;//do not change ft0
     for (int k=0;k<niter;k++)
     {
         cudaMemsetAsync(h10, 0, N * Ntheta * Nzp * sizeof(float), s);
@@ -97,7 +93,7 @@ void rectv::cg(float *ft0, float *ftn0, float *h10, float4 *h20, float *g0, floa
         cudaDeviceSynchronize();
         double norm=0;
         for( int i=0;i<N*Ntheta*Nzp;i++) norm+=h10[i];
-        printf("%f\n",norm);
+        printf("%d %f\n",igpu,norm);
         //differences
         // diffgrad<<<GS3d4, BS3d, 0, s>>>(h20, psi0, mu0, rho, (N + 1), (M + 1) * (Nzp + 1));
         diff<<<GS3d2, BS3d, 0, s>>>(h10, g0, N, Ntheta, Nzp);
