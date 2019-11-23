@@ -5,6 +5,7 @@ import rectv_gpu
 import numpy as np
 import dxchange
 import tomopy
+import sys
 
 
 def takephi(m, ntheta):
@@ -71,12 +72,12 @@ if __name__ == "__main__":
 
     data = np.load("data.npy")  # load continuous data
     rot_center = 252
-    nsp = 1  # number of slices to process simultaniously by gpus
-    m = 8  # number of basis functions, must be a multiple of nframes
-    lambda0 = pow(2, -3)  # regularization parameter 1
-    lambda1 = pow(2, 0)  # regularization parameter 2
-    niters = 4  # number of iterations
-    ngpus = 4  # number of gpus
+    nsp = np.int(sys.argv[1]) # number of slices to process simultaniously by gpus
+    m = 16  # number of basis functions, must be a multiple of nframes
+    lambda0 = 1e-3  # regularization parameter 1
+    lambda1 = 1  # regularization parameter 2
+    niters = np.int(sys.argv[3])  # number of iterations
+    ngpus = np.int(sys.argv[2]) # number of gpus
 
     rtv = rec_tv(data, m, nsp, rot_center, lambda0, lambda1, niters, ngpus)
     print(np.linalg.norm(rtv))

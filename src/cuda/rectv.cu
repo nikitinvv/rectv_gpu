@@ -31,6 +31,7 @@ rectv::rectv(size_t N_, size_t Ntheta_, size_t M_, size_t Nz_, size_t Nzp_, size
 	ftmp = new float *[ngpus];
 	gtmp = new float *[ngpus];
 	ftmps = new float *[ngpus];
+	fe = new float *[ngpus];
 	phi = new float2 *[ngpus];
 	theta = new float *[ngpus];
 
@@ -52,6 +53,7 @@ rectv::rectv(size_t N_, size_t Ntheta_, size_t M_, size_t Nz_, size_t Nzp_, size
 		cudaMalloc((void **)&gtmp[igpu], 2 * N * Ntheta * Nzp * sizeof(float));
 		cudaMalloc((void **)&ftmps[igpu], 2 * N * N * Nzp * sizeof(float));
 		cudaMalloc((void **)&phi[igpu], 2 * Ntheta * M * sizeof(float));
+		cudaMalloc((void **)&fe[igpu], N * N * M * (Nzp + 2) * sizeof(float));
 		cudaMalloc((void **)&theta[igpu], Ntheta * sizeof(float));		
 	}
 	cudaDeviceSynchronize();
@@ -63,6 +65,7 @@ rectv::~rectv()
 	cudaFree(fn);
 	cudaFree(ft);
 	cudaFree(ftn);
+	cudaFree(fe);
 	cudaFree(g);
 	cudaFree(h1);
 	cudaFree(h2);
@@ -75,6 +78,7 @@ rectv::~rectv()
 		cudaFree(ftmp[igpu]);
 		cudaFree(gtmp[igpu]);
 		cudaFree(ftmps[igpu]);
+		cudaFree(fe[igpu]);
 		cudaFree(phi[igpu]);
 		cudaFree(theta[igpu]);
 		cudaDeviceReset();
@@ -236,8 +240,14 @@ void rectv::run(float *fres, float *g_, float *theta_, float *phi_, size_t niter
 				double norm[2] = {};
 				for (int k = 0; k < N * Ntheta * Nz; k++)
 					norm[0] += (h1[k] - g[k]) * (h1[k] - g[k]);
-				for (int k = 0; k < (N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * Nz / Nzp; k++)
-					norm[1] += sqrt(h2[k].x * h2[k].x + h2[k].y * h2[k].y + h2[k].z * h2[k].z + h2[k].w * h2[k].w);
+				// for (int k = 0; k < (N + 1) * (N + 1) * (M + 1) * (Nzp + 1) * Nz / Nzp; k++)
+				// 	norm[1] += sqrt(h2[k].x * h2[k].x + h2[k].y * h2[k].y + h2[k].z * h2[k].z + h2[k].w * h2[k].w);
+				for (int kk=0;kk<Nz / Nzp;kk++)	
+					for (int k = 0; k < (N + 1) * (N + 1) * (M + 1) * (Nzp); k++)
+					{
+						int id = kk* (N + 1) * (N + 1) * (M + 1) * (Nzp + 1)+k;
+						norm[1] += sqrt(h2[id].x * h2[id].x + h2[id].y * h2[id].y + h2[id].z * h2[id].z + h2[id].w * h2[id].w);
+					}	
 				fprintf(stderr, "iterations (%d/%d) f:%f, r:%f, total:%f\n", iter, niter, norm[0], lambda0 * norm[1], norm[0] + lambda0 * norm[1]);
 				fflush(stdout);
 			}

@@ -38,6 +38,7 @@ class rectv
 	float **gtmp;
 	float **ftmps;
 	float **gtmps;
+	float **fe;
 
 	void radonapr(float *g, float *f, float tau, int igpu, cudaStream_t s);
 	void radonapradj(float *f, float *g, float tau, int igpu, cudaStream_t s);
