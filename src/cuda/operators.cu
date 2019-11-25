@@ -1,6 +1,6 @@
 
 #include "rectv.cuh"
-#include "kernels.cuh"
+#include "kernels_operators.cuh"
 #include <stdio.h>
 
 void rectv::radonapr(float *g, float *f, float tau, int igpu, cudaStream_t s)
