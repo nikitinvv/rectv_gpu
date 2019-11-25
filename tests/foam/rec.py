@@ -17,73 +17,34 @@ def takephi(m, ntheta):
     phi[0] = 0  # symmetric
     return phi
 
-def rec_tv(data, m, nsp, rot_center,
-           lambda0, lambda1, niters, ngpus):
-    """
-    Reconstruct. Time-domain decomposition + regularization.
-    """
-
-    [nframes, nproj, ns, n] = data.shape
-
-    # reorder input data for compatibility
-    data = np.reshape(data, [nframes*nproj, ns, n])
-    data = np.ndarray.flatten(data.swapaxes(0, 1))
-
-    # memory for result
-    rec = np.zeros([n*n*ns*m], dtype='float32')
-
-    # Make a class for tv
-    cl = rectv_gpu.rectv(n, nframes*nproj, m, ns,
-                         nsp, ngpus, rot_center, lambda0, lambda1)
-    theta = np.linspace(0, nframes*np.pi, nframes*nproj, endpoint=False).astype('float32')
-    phi = takephi(m, nframes*nproj).flatten()
-    # Run iterations
-    cl.run_wrap(rec, data, theta, phi,  niters)
-
-    # reorder result for compatibility with tomopy
-    rec = np.rot90(np.reshape(rec, [ns, m, n, n]).swapaxes(0, 1), axes=(
-        2, 3))/nproj*2
-
-    # take slices corresponding to angles k\pi
-    rec = rec[::m//nframes]
-
-    return rec
-
-
-def rec(data, rot_center):
-    """
-    Reconstruct with Gridrec.
-    """
-
-    [nframes, nproj, ns, n] = data.shape
-    theta = np.linspace(0, np.pi*nframes, nproj*nframes, endpoint=False)
-    # Reconstruct object. FBP.
-    rec = np.zeros([nframes, ns, n, n], dtype='float32')
-    for time_frame in range(0, nframes):
-        rec0 = tomopy.recon(data[time_frame], theta[time_frame*nproj:(time_frame+1)*nproj],
-                            center=rot_center-np.mod(time_frame, 2), algorithm='gridrec')
-        # Mask each reconstructed slice with a circle.
-        rec[time_frame] = tomopy.circ_mask(rec0, axis=0, ratio=0.95)
-
-    return rec
-
-
 if __name__ == "__main__":
 
-    data = np.load("data.npy")  # load continuous data
-    rot_center = 252
-    nsp = np.int(sys.argv[1]) # number of slices to process simultaniously by gpus
+    data = np.load("data2.npy")  # load continuous data
+    # np.save('data2.npy',np.reshape(data,[300*8,4,504]).swapaxes(0,1))
+    # exit()
+    [ns, ntheta, n] = data.shape
+    rot_center = n/2
+   
     m = 16  # number of basis functions, must be a multiple of nframes
     lambda0 = 1e-3  # regularization parameter 1
     lambda1 = 1  # regularization parameter 2
-    niters = np.int(sys.argv[3])  # number of iterations
+    nsp = np.int(sys.argv[1]) # number of slices to process simultaniously by gpus
     ngpus = np.int(sys.argv[2]) # number of gpus
-
-    rtv = rec_tv(data, m, nsp, rot_center, lambda0, lambda1, niters, ngpus)
+    niter = np.int(sys.argv[3])  # number of iterations
+    titer = np.int(sys.argv[4])  # number of iterations
+    
+    cl = rectv_gpu.rectv(n, ntheta, m, ns,
+                         nsp, ngpus, rot_center, lambda0, lambda1)
+    # angles
+    theta = np.linspace(0, 8*np.pi, ntheta, endpoint=False).astype('float32')
+    # basis
+    phi = takephi(m, ntheta).flatten()
+    # memory for result
+    rtv = np.zeros([n*n*ns*m], dtype='float32')
+    data = data.flatten()
+    # Run iterations
+    cl.run_wrap(rtv, data, theta, phi,  niter, titer)
+    rtv = np.reshape(rtv, [ns, m, n, n])
     print(np.linalg.norm(rtv))
     for k in range(rtv.shape[0]):
         dxchange.write_tiff_stack(rtv[k], 'rec_tv/rec_'+str(k), overwrite=True)
-
-    # r = rec(data,rot_center)
-    # for k in range(r.shape[0]):
-    #     dxchange.write_tiff_stack(r[k],'rec/rec_'+str(k))

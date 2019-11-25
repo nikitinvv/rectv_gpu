@@ -8,11 +8,11 @@ enum dir {
 
 class radonusfft
 {
-	size_t N;
-	size_t Ntheta;
-	size_t Nz;
+	size_t n;
+	size_t ntheta;
+	size_t nz;
 	float center;
-	size_t M;
+	size_t m;
 	float mu;
 
 	float2 *f;
@@ -31,7 +31,7 @@ class radonusfft
 	dim3 BS2d, BS3d, GS2d0, GS3d0, GS3d1, GS3d2, GS3d3;
 
 public:
-	radonusfft(size_t N, size_t Ntheta, size_t Nz, float center);
+	radonusfft(size_t n, size_t ntheta, size_t nz, float center);
 	~radonusfft();
 	void fwdR(float2 *g, float2 *f, float *theta, cudaStream_t s);
 	void adjR(float2 *f, float2 *g, float *theta, bool filter, cudaStream_t s);
