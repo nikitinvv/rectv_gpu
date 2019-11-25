@@ -32,7 +32,7 @@ rectv::rectv(int n_, int ntheta_, int M_, int nz_, int nzp_, int ngpus_, float c
 	h2 = new float4 *[ngpus];
 	phi = new float2 *[ngpus];
 	theta = new float *[ngpus];
-
+	
 	BS2d = dim3(32, 32);
 	BS3d = dim3(32, 32, 1);
 	GS2d0 = dim3(ceil(ntheta / (float)BS2d.x), ceil(m / (float)BS2d.y));
@@ -144,7 +144,7 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 				// intermediate arrays
 				float* h10 = h1[igpu];
     			float4* h20 = h2[igpu];
-    			float* fm0 = &fm[igpu][(iz != 0) * n * n * m];//modifyable version of f
+				float* fm0 = &fm[igpu][(iz != 0) * n * n * m];//modifyable version of f
     			cudaMemcpyAsync(&fm0[-(iz != 0) * n * n * m],&f0[-(iz != 0) * n * n * m],n*n*(nzp + 2 - (iz == 0) - (iz == nz / nzp - 1))*m* sizeof(float), cudaMemcpyDefault, s1); //mem+=n*n*m*(nzp+2-(iz==0)-(iz==nz/nzp-1))*sizeof(float);
 				// ADMM
 				solver_admm(f0, fn0, h10, h20, fm0, g0, psi0, mu0, iz, titer, igpu, s1);

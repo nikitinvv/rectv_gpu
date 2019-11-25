@@ -47,12 +47,13 @@ class rectv
 	float **fe;
 	float **h1;
 	float4 **h2;
+
 	
 
 	void radonapr(float *g, float *f, float tau,int igpu, cudaStream_t s);
 	void radonapradj(float *f, float *g, float tau,int igpu, cudaStream_t s);
-	void gradient(float4 *g, float *f, float tau,int iz, int igpu, cudaStream_t s);
-	void divergent(float *fn, float *f, float4 *g,float tau, int igpu, cudaStream_t s);
+	void gradient(float4 *g, float *f, int iz, int igpu, cudaStream_t s);
+	void divergent(float *fn, float4 *g, float tau, int igpu, cudaStream_t s);
 	void solver_admm(float *f, float *fn, float *h1, float4 *h2, float *g, float4* psi, float4* mu, int iz, int titer, int igpu, cudaStream_t s);	
 public:
 	rectv(int n, int ntheta, int m, int nz, int nzp,
@@ -60,8 +61,5 @@ public:
 	~rectv();
 	
 	void run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, int titer);
-	void adjoint_tests(float *g, float* theta, float* phi);
-
-// wrappers for python interface
-	void adjoint_tests_wrap(float *g, int N1, float *theta, int N2, float *phi, int N3);
+	void adjoint_tests(size_t g, size_t theta, size_t phi);
 };

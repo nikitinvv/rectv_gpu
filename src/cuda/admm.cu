@@ -2,7 +2,7 @@
 #include "rectv.cuh"
 #include "stdio.h"
 
-__global__ void diff(float *h1, float *g, int n, int ntheta, int nz)
+__global__ void lin(float *f, float *g, float *h, float a, float b, float c, int n, int ntheta, int nz)
 {
     int tx = blockIdx.x * blockDim.x + threadIdx.x;
     int ty = blockIdx.y * blockDim.y + threadIdx.y;
@@ -11,10 +11,11 @@ __global__ void diff(float *h1, float *g, int n, int ntheta, int nz)
         return;
 
     int id0 = tx + ty * n + tz * n * ntheta;
-    h1[id0] = (h1[id0] - g[id0]);
+    f[id0] = a*f[id0] + b*g[id0];
+    if (h!=NULL) f[id0]+=c*h[id0];
 }
 
-__global__ void updatemu_ker(float4 *mu, float4 *h2, float4 *psi, float rho, int n, int nz)
+__global__ void lin4(float4 *f, float4 *g, float4 *h, float a, float b, float c, int n, int nz)
 {
     int tx = blockIdx.x * blockDim.x + threadIdx.x;
     int ty = blockIdx.y * blockDim.y + threadIdx.y;
@@ -23,25 +24,17 @@ __global__ void updatemu_ker(float4 *mu, float4 *h2, float4 *psi, float rho, int
         return;
 
     int id0 = tx + ty * n + tz * n * n;
-    mu[id0].x += rho * (h2[id0].x - psi[id0].x);
-    mu[id0].y += rho * (h2[id0].y - psi[id0].y);
-    mu[id0].z += rho * (h2[id0].z - psi[id0].z);
-    mu[id0].w += rho * (h2[id0].w - psi[id0].w);
-}
-
-__global__ void diffgrad(float4 *h2, float4 *psi, float4 *mu, float rho, int n, int nz)
-{
-    int tx = blockIdx.x * blockDim.x + threadIdx.x;
-    int ty = blockIdx.y * blockDim.y + threadIdx.y;
-    int tz = blockIdx.z * blockDim.z + threadIdx.z;
-    if (tx >= n || ty >= n || tz >= nz)
-        return;
-
-    int id0 = tx + ty * n + tz * n * n;
-    h2[id0].x = rho * (h2[id0].x - psi[id0].x + mu[id0].x / rho);
-    h2[id0].y = rho * (h2[id0].y - psi[id0].y + mu[id0].y / rho);
-    h2[id0].z = rho * (h2[id0].z - psi[id0].z + mu[id0].z / rho);
-    h2[id0].w = rho * (h2[id0].w - psi[id0].w + mu[id0].w / rho);
+    f[id0].x = a*f[id0].x+b*g[id0].x;
+    f[id0].y = a*f[id0].y+b*g[id0].y;
+    f[id0].z = a*f[id0].z+b*g[id0].z;
+    f[id0].w = a*f[id0].w+b*g[id0].w;
+    if(h!=NULL)
+    {
+        f[id0].x += c*h[id0].x;
+        f[id0].y += c*h[id0].y;
+        f[id0].z += c*h[id0].z;
+        f[id0].w += c*h[id0].w;
+    }
 }
 
 __global__ void solve_reg_ker(float4* psi, float4 *h2, float4* mu, float lambda, float rho, int n, int nz)
@@ -84,22 +77,22 @@ void rectv::solver_admm(float *f, float *fn, float* h1, float4* h2, float* fm, f
     for (int k=0;k<titer;k++)
     {
         //forward step
-        gradient(h2, fm, 1, iz, igpu, s); //iz for border control
+        gradient(h2, fm,  iz, igpu, s); //iz for border control
         radonapr(h1, fm, 1, igpu, s);        
         //differences
-        diffgrad<<<GS3d4, BS3d, 0, s>>>(h2, psi, mu, rho, (n + 1), (m + 1) * (nzp + 1));
-        diff<<<GS3d2, BS3d, 0, s>>>(h1, g, n, ntheta, nzp);
-        divergent(fm, fm, h2, 0.5/lambda1, igpu, s);
+        lin4<<<GS3d4, BS3d, 0, s>>>(h2, psi, mu, rho, -rho, 1, (n + 1), (m + 1) * (nzp + 1));
+        lin<<<GS3d2, BS3d, 0, s>>>(h1, g, NULL, 1, -1, 0, n, ntheta, nzp);
+        divergent(fm, h2, -0.5/lambda1, igpu, s);
         //backward step
-        radonapradj(fm, h1, 0.5/lambda1, igpu, s);         
+        radonapradj(fm, h1, -0.5/lambda1, igpu, s);   
     }    
-    cudaMemsetAsync(h2, 0, (n + 1) * (n + 1) * (m + 1) * (nzp + 1) * sizeof(float4), s);        
     //forward step
-    gradient(h2, fm, 1, iz, igpu, s); //iz for border control
-    cudaMemcpyAsync(fn, fm, n * n * nzp * m * sizeof(float), cudaMemcpyDefault, s);
+    gradient(h2, fm, iz, igpu, s); //iz for border control
     // solve reg
     solve_reg_ker<<<GS3d4, BS3d, 0, s>>>(psi, h2, mu, lambda0, rho, n+1, (m+1)*(nzp+1));   
-    updatemu_ker<<<GS3d4, BS3d, 0, s>>>(mu, h2, psi, rho, n+1, (m+1)*(nzp+1));   
+    lin4<<<GS3d4, BS3d, 0, s>>>(mu, h2, psi, 1, rho, -rho, n+1, (m+1)*(nzp+1));   
+    cudaMemcpyAsync(fn, fm, n * n * nzp * m * sizeof(float), cudaMemcpyDefault, s);
+    
     // // cudaDeviceSynchronize();
     // double norm=0;
     // for( int id=0;id< (n + 1)*(n + 1) * (m + 1) * (nzp);id++) 

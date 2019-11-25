@@ -19,7 +19,7 @@ __global__ void extendf(float *fe, float *f, int flgl, int flgr, int N, int M, i
 	fe[id0] = f[id];
 }
 
-__global__ void grad(float4 *h2, float *f, float tau, float lambda1, int N, int M, int Nz)
+__global__ void gradf(float4 *h2, float *f, float lambda1, int N, int M, int Nz)
 {
 	int tx = blockIdx.x * blockDim.x + threadIdx.x;
 	int ty = blockIdx.y * blockDim.y + threadIdx.y;
@@ -37,13 +37,13 @@ __global__ void grad(float4 *h2, float *f, float tau, float lambda1, int N, int 
 	int idy = tx + (1 + ty) * N + tt * N * N + tz * N * N * M;
 	int idt = tx + ty * N + (1 + tt) * N * N + tz * N * N * M;
 	int idz = tx + ty * N + tt * N * N + (1 + tz) * N * N * M;
-	h2[id0].x = tau * (f[idx] - f[id]) / 2;
-	h2[id0].y = tau * (f[idy] - f[id]) / 2;
-	h2[id0].z = tau * (f[idt] - f[id]) / 2 * lambda1;
-	h2[id0].w = tau * (f[idz] - f[id]) / 2;
+	h2[id0].x =  (f[idx] - f[id]) / 2;
+	h2[id0].y =  (f[idy] - f[id]) / 2;
+	h2[id0].z =  (f[idt] - f[id]) / 2 * lambda1;
+	h2[id0].w =  (f[idz] - f[id]) / 2;
 }
 
-__global__ void div(float *fn, float *f, float4 *h2, float tau, float lambda1, int N, int M, int Nz)
+__global__ void div(float *fn, float4 *h2, float tau, float lambda1, int N, int M, int Nz)
 {
 	int tx = blockIdx.x * blockDim.x + threadIdx.x;
 	int ty = blockIdx.y * blockDim.y + threadIdx.y;
@@ -65,11 +65,11 @@ __global__ void div(float *fn, float *f, float4 *h2, float tau, float lambda1, i
 	int idy = tx + (-1 + ty) * N + tt * N * N + tz * N * N * M;
 	int idt = tx + ty * N + (-1 + tt) * N * N + tz * N * N * M;
 	int idz = tx + ty * N + tt * N * N + (-1 + tz) * N * N * M;
-	fn[id0] = f[id0];
-	fn[id0] -= tau * (h2[idx].x - h2[id].x) / 2;
-	fn[id0] -= tau * (h2[idy].y - h2[id].y) / 2;
-	fn[id0] -= tau * (h2[idt].z - h2[id].z) / 2 * lambda1;
-	fn[id0] -= tau * (h2[idz].w - h2[id].w) / 2;
+	// fn[id0] = 0;
+	fn[id0] +=  tau*(h2[idx].x - h2[id].x) / 2;
+	fn[id0] +=  tau*(h2[idy].y - h2[id].y) / 2;
+	fn[id0] +=  tau*(h2[idt].z - h2[id].z) / 2 * lambda1;
+	fn[id0] +=  tau*(h2[idz].w - h2[id].w) / 2;
 }
 
 void __global__ addreal(float *g, float2 *f, float tau, int N, int Ntheta, int Nz)
