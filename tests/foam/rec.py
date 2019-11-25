@@ -8,24 +8,25 @@ import tomopy
 import sys
 
 
+def getp(a):
+    return a.__array_interface__['data'][0]
+
 def takephi(m, ntheta):
     [x, y] = np.meshgrid(np.arange(-ntheta//2, ntheta//2), np.arange(-m//2, m//2))
-    phi = np.exp(2*np.pi*1j*x*y/ntheta)/np.sqrt(ntheta)
-    phi = np.zeros([m, ntheta, 2], dtype='float32')
-    phi[:, :, 0] = np.cos(2*np.pi*x*y/ntheta)/np.sqrt(ntheta)
-    phi[:, :, 1] = np.sin(2*np.pi*x*y/ntheta)/np.sqrt(ntheta)
+    # phi = np.exp(2*np.pi*1j*x*y/ntheta)/np.sqrt(ntheta)
+    phi = np.zeros([m, 2*ntheta], dtype='float32')
+    phi[:, ::2] = np.cos(2*np.pi*x*y/ntheta)/np.sqrt(ntheta)
+    phi[:, 1::2] = np.sin(2*np.pi*x*y/ntheta)/np.sqrt(ntheta)
     phi[0] = 0  # symmetric
     return phi
 
 if __name__ == "__main__":
 
     data = np.load("data2.npy")  # load continuous data
-    # np.save('data2.npy',np.reshape(data,[300*8,4,504]).swapaxes(0,1))
-    # exit()
     [ns, ntheta, n] = data.shape
     rot_center = n/2
    
-    m = 16  # number of basis functions, must be a multiple of nframes
+    m = 8  # number of basis functions, must be a multiple of nframes
     lambda0 = 1e-3  # regularization parameter 1
     lambda1 = 1  # regularization parameter 2
     nsp = np.int(sys.argv[1]) # number of slices to process simultaniously by gpus
@@ -38,13 +39,11 @@ if __name__ == "__main__":
     # angles
     theta = np.linspace(0, 8*np.pi, ntheta, endpoint=False).astype('float32')
     # basis
-    phi = takephi(m, ntheta).flatten()
+    phi = takephi(m, ntheta)
     # memory for result
-    rtv = np.zeros([n*n*ns*m], dtype='float32')
-    data = data.flatten()
+    rtv = np.zeros([ns,m,n,n], dtype='float32')
     # Run iterations
-    cl.run_wrap(rtv, data, theta, phi,  niter, titer)
-    rtv = np.reshape(rtv, [ns, m, n, n])
+    cl.run(getp(rtv), getp(data), getp(theta), getp(phi),  niter, titer)
     print(np.linalg.norm(rtv))
     for k in range(rtv.shape[0]):
         dxchange.write_tiff_stack(rtv[k], 'rec_tv/rec_'+str(k), overwrite=True)

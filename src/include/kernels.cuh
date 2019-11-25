@@ -37,10 +37,10 @@ __global__ void grad(float4 *h2, float *f, float tau, float lambda1, int N, int 
 	int idy = tx + (1 + ty) * N + tt * N * N + tz * N * N * M;
 	int idt = tx + ty * N + (1 + tt) * N * N + tz * N * N * M;
 	int idz = tx + ty * N + tt * N * N + (1 + tz) * N * N * M;
-	h2[id0].x += tau * (f[idx] - f[id]) / 2;
-	h2[id0].y += tau * (f[idy] - f[id]) / 2;
-	h2[id0].z += tau * (f[idt] - f[id]) / 2 * lambda1;
-	h2[id0].w += tau * (f[idz] - f[id]) / 2;
+	h2[id0].x = tau * (f[idx] - f[id]) / 2;
+	h2[id0].y = tau * (f[idy] - f[id]) / 2;
+	h2[id0].z = tau * (f[idt] - f[id]) / 2 * lambda1;
+	h2[id0].w = tau * (f[idz] - f[id]) / 2;
 }
 
 __global__ void div(float *fn, float *f, float4 *h2, float tau, float lambda1, int N, int M, int Nz)

@@ -15,10 +15,10 @@ void rectv::radonapr(float *g, float *f, float tau, int igpu, cudaStream_t s)
     cudaMemsetAsync(ftmp0, 0, 2 * n * n * m * nzp * sizeof(float), s);
     cudaMemsetAsync(ftmps0, 0, 2 * n * n * nzp * sizeof(float), s);
     cudaMemsetAsync(gtmp0, 0, 2 * n * ntheta * nzp * sizeof(float), s);
+    cudaMemsetAsync(g, 0, n * ntheta * nzp * sizeof(float), s);
 
     //switch to complex numbers
     makecomplex<<<GS3d0, BS3d, 0, s>>>(ftmp0, f, n, n, m * nzp);
-    cudaMemset((void **)&gtmp0, 0, 2 * n * ntheta * nzp * sizeof(float));
     for (int i = 0; i < m; i++)
     {
         //decompositon coefficients
@@ -57,11 +57,11 @@ void rectv::radonapradj(float *f, float *g, float tau, int igpu, cudaStream_t s)
     addreal<<<GS3d0, BS3d, 0, s>>>(f, ftmp0, -tau, n, n, m * nzp);
 }
 
-void rectv::gradient(float4 *h2, float *ft, float tau, int iz, int igpu, cudaStream_t s)
+void rectv::gradient(float4 *h2, float *f, float tau, int iz, int igpu, cudaStream_t s)
 {
     float *ftmp0 = ftmp[igpu];
     //repeat border values
-    extendf<<<GS3d3, BS3d, 0, s>>>(ftmp0, ft, iz != 0, iz != nz / nzp - 1, n + 2, m + 2, nzp + 2);
+    extendf<<<GS3d3, BS3d, 0, s>>>(ftmp0, f, iz != 0, iz != nz / nzp - 1, n + 2, m + 2, nzp + 2);
     grad<<<GS3d3, BS3d, 0, s>>>(h2, ftmp0, tau, lambda1, n + 1, m + 1, nzp + 1);
 }
 
@@ -78,15 +78,13 @@ void rectv::adjoint_tests(float *g_, float* theta_, float* phi_)
     cudaMemcpy(theta[0], theta_, ntheta * sizeof(float), cudaMemcpyDefault);
     cudaMemcpy(phi[0], phi_, 2 * ntheta * m * sizeof(float), cudaMemcpyDefault);
 
-    cudaMemset(ft, 0, n * n * nz * m * sizeof(float));
-    cudaMemset(ftn, 0, n * n * nz * m * sizeof(float));
-    radonapradj(ft, g, 1, 0, 0);
-    radonapr(h1[0], ft, 1, 0, 0);
+    radonapradj(f, g, 1, 0, 0);
+    radonapr(h1[0], f, 1, 0, 0);
     
     double sum[] = {0,0,0};
     float *ftmp = new float[n * n * nz * m];
     float *h1tmp = new float[n * ntheta * nz];
-    cudaMemcpy(ftmp, ft, n * n * nz * m * sizeof(float), cudaMemcpyDefault);    
+    cudaMemcpy(ftmp, f, n * n * nz * m * sizeof(float), cudaMemcpyDefault);    
     cudaMemcpy(h1tmp, h1[0], n * ntheta * nz * sizeof(float), cudaMemcpyDefault);
     for (int k = 0; k < n * n * nz * m; k++) sum[0] += ftmp[k] * ftmp[k];
     for (int k = 0; k < n * ntheta * nz; k++) sum[1] += g_[k] * h1tmp[k];
@@ -95,13 +93,13 @@ void rectv::adjoint_tests(float *g_, float* theta_, float* phi_)
     printf("normalization test for Rapr: %f ? %f\n", -sum[1], sum[2]);
     
     // gradient
-    gradient(h2[0], ft, 1, 0, 0, 0);
+    gradient(h2[0], f, 1, 0, 0, 0);
    
-    divergent(ftn, ftn, h2[0], 1, 0, 0);
+    divergent(fn, fn, h2[0], 1, 0, 0);
      
     float *fntmp = new float[n * n * nz * m];
     float *h2tmp = new float[(n + 1) * (n + 1) * (m + 1) * (nz + 1)  * sizeof(float4)];
-    cudaMemcpy(fntmp, ftn, n * n * nz * m * sizeof(float), cudaMemcpyDefault);    
+    cudaMemcpy(fntmp, fn, n * n * nz * m * sizeof(float), cudaMemcpyDefault);    
     cudaMemcpy(h2tmp, h2[0], (n + 1) * (n + 1) * (m + 1) * (nz + 1) *  sizeof(float4), cudaMemcpyDefault);
     for (int k = 0; k < n * n * nz * m; k++) sum[0] += ftmp[k] * fntmp[k];
     for (int k = 0; k < (n + 1) * (n + 1) * (m + 1) * (nz + 1); k++) sum[1] += h2tmp[k] * h2tmp[k];

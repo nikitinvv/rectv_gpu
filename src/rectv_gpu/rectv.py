@@ -81,7 +81,6 @@ class rectv(_object):
     __del__ = lambda self : None;
     def run(self, *args): return _rectv.rectv_run(self, *args)
     def adjoint_tests(self, *args): return _rectv.rectv_adjoint_tests(self, *args)
-    def run_wrap(self, *args): return _rectv.rectv_run_wrap(self, *args)
     def adjoint_tests_wrap(self, *args): return _rectv.rectv_adjoint_tests_wrap(self, *args)
 rectv_swigregister = _rectv.rectv_swigregister
 rectv_swigregister(rectv)
