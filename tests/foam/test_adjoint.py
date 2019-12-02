@@ -4,8 +4,11 @@
 import rectv_gpu
 import numpy as np
 import dxchange
-import tomopy
+#import tomopy
 
+
+def getp(a):
+    return a.__array_interface__['data'][0]
 
 def takephi(m, ntheta):
     [x, y] = np.meshgrid(np.arange(-ntheta//2, ntheta//2), np.arange(-m//2, m//2))
@@ -24,13 +27,13 @@ if __name__ == "__main__":
     lambda0 = pow(2, -9)  # regularization parameter 1
     lambda1 = pow(2, 2)  # regularization parameter 2
     ngpus = 1
-    [nframes, nproj, ns, n] = data.shape
+    [ns, ntheta, n] = data.shape
     # Make a class for tv
-    cl = rectv_gpu.rectv(n, nframes*nproj, m, ns,
+    cl = rectv_gpu.rectv(n, ntheta, m, ns,
                          ns, ngpus, rot_center, lambda0, lambda1)
-    theta = np.linspace(0, nframes*np.pi, nframes*nproj, endpoint=False).astype('float32')
-    phi = takephi(m, nframes*nproj).flatten()
+    theta = np.linspace(0, 8*np.pi, ntheta, endpoint=False).astype('float32')
+    phi = takephi(m, ntheta)
     # Run iterations
-    data = np.reshape(data, [nframes*nproj, ns, n])
-    data = np.ndarray.flatten(data.swapaxes(0, 1))
-    cl.adjoint_tests_wrap(data, theta, phi)
+#    data = np.reshape(data, [nframes*nproj, ns, n])
+#    data = np.ndarray.flatten(data.swapaxes(0, 1))
+    cl.adjoint_tests(getp(data), getp(theta), getp(phi))

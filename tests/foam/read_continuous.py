@@ -11,18 +11,14 @@ import tomopy
 import dxchange
 
 h5fname = "/home/beams/VNIKITIN/3dtv/dk_MCFG_1_p_s1_.h5"
-sino = (1300, 1316) # slices for reconstructions
+sino = (1250, 1378) # slices for reconstructions
 nframes = 8 # time frames for reconstruction
 frame = 94 # middle time frame for reconstruction
 nproj = 300 # number of angles for 180 degrees interval
-binning = 2 
+binning = 1 
 
 proj, flat, dark, theta = dxchange.read_aps_32id(h5fname, sino=sino, proj=((frame-nframes//2)*nproj,(frame+nframes//2)*nproj))
 theta = theta[(frame-nframes//2)*nproj:(frame+nframes//2)*nproj]
-print(proj.shape)
-print(theta.shape)
-
-#proj = proj[(frame-nframes//2)*nproj:(frame+nframes//2)*nproj, :, :]
 
 # Flat-field correction of raw data.
 data = tomopy.normalize(proj, flat, dark, cutoff=1.4)
@@ -43,5 +39,5 @@ if data.shape[1] > 1:
     data = tomopy.downsample(data, level=binning, axis=1)
 
 # reshape for 4d
-data = np.reshape(data,[nframes,nproj,data.shape[1],data.shape[2]])
+data = np.reshape(data,[nframes*nproj,data.shape[1],data.shape[2]]).swapaxes(0,1)
 np.save('data.npy',data)

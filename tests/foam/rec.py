@@ -4,7 +4,7 @@
 import rectv_gpu
 import numpy as np
 import dxchange
-import tomopy
+#import tomopy
 import sys
 
 
@@ -22,7 +22,7 @@ def takephi(m, ntheta):
 
 if __name__ == "__main__":
 
-    data = np.load("data2.npy")  # load continuous data
+    data = np.load("data.npy")  # load continuous data
     [ns, ntheta, n] = data.shape
     rot_center = n/2
    
