@@ -60,6 +60,6 @@ public:
 		  int ngpus, float center, float lambda0, float lambda1);
 	~rectv();
 	
-	void run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, int titer);
+	void run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, int titer, bool dbg);
 	void adjoint_tests(size_t g, size_t theta, size_t phi);
 };

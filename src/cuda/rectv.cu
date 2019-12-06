@@ -83,7 +83,7 @@ rectv::~rectv()
 	}
 }
 
-void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, int titer)
+void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, int titer, bool dbg)
 {
 	//data
 	cudaMemcpy(g, (float*)g_, n * ntheta * nz * sizeof(float), cudaMemcpyHostToHost);
@@ -106,7 +106,6 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 	{
 		int igpu = omp_get_thread_num();
 	
-		printf("gpu: %d\n",igpu);
 		cudaSetDevice(igpu);
 		cudaStream_t s1, s2, s3, st;
 		cudaEvent_t e1, e2, et;
@@ -201,11 +200,14 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 				f = fn;
 				fn = tmp;
 				
-				double norm=0;
-				for (int k = 0; k < n * n * m * nz; k++)
-					norm += (fn[k] - f[k]) * (fn[k] - f[k]);
-				fprintf(stderr, "iterations (%d/%d) f:%f\n", iter, niter, norm);
-				fflush(stdout);
+				if (dbg)
+				{
+					double norm=0;
+					for (int k = 0; k < n * n * m * nz; k++)
+						norm += (fn[k] - f[k]) * (fn[k] - f[k]);
+					fprintf(stderr, "iterations (%d/%d) f:%f\n", iter, niter, norm);
+					fflush(stdout);
+				}
 			}
 		}
 		cudaDeviceSynchronize();

@@ -89,8 +89,8 @@ void rectv::adjoint_tests(size_t g_, size_t theta_, size_t phi_)
     for (int k = 0; k < n * n * nz * m; k++) sum[0] += ftmp[k] * ftmp[k];
     for (int k = 0; k < n * ntheta * nz; k++) sum[1] += ((float*)g_)[k] * h1tmp[k];
     for (int k = 0; k < n * ntheta * nz; k++) sum[2] += h1tmp[k] * h1tmp[k];
-    printf("Adjoint test for Rapr: %f ? %f\n", sum[0], -sum[1]);
-    printf("normalization test for Rapr: %f ? %f\n", -sum[1], sum[2]);
+    printf("Adjoint test for Rapr: %f ? %f\n", sum[0], sum[1]);
+    printf("normalization test for Rapr: %f ? %f\n", sum[1], sum[2]);
     
     // gradient
     gradient(h2[0], f, 0, 0, 0);

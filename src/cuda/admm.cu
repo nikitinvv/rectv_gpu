@@ -77,27 +77,29 @@ void rectv::solver_admm(float *f, float *fn, float* h1, float4* h2, float* fm, f
     for (int k=0;k<titer;k++)
     {
         //forward step
+        // h2 = \nabla fm
         gradient(h2, fm,  iz, igpu, s); //iz for border control
+        // h1 = \Rad fm
         radonapr(h1, fm, 1, igpu, s);        
         //differences
+        // h2 = rho*(h2-psi)+mu
         lin4<<<GS3d4, BS3d, 0, s>>>(h2, psi, mu, rho, -rho, 1, (n + 1), (m + 1) * (nzp + 1));
+        // h1 = h1-g
         lin<<<GS3d2, BS3d, 0, s>>>(h1, g, NULL, 1, -1, 0, n, ntheta, nzp);
-        divergent(fm, h2, -0.5/lambda1, igpu, s);
         //backward step
-        radonapradj(fm, h1, -0.5/lambda1, igpu, s);   
+        // fm = fm-0.5/lambda1 \nabla* h2
+        divergent(fm, h2, -0.5/max(lambda1,1.0), igpu, s);        
+        // fm = fm-0.5/lambda1 \Rad* h1
+        radonapradj(fm, h1, -0.5/max(lambda1,1.0), igpu, s);   
     }    
     //forward step
+    // h2 = \nabla fm
     gradient(h2, fm, iz, igpu, s); //iz for border control
-    // solve reg
+    // solve reg by softhresholding
+    // psi = (h2+mu/rho)-lamd/rho*(h2+mu/rho)/|h2+mu/rho|*max(|h2+mu/rho|-lamd/rho,0)
     solve_reg_ker<<<GS3d4, BS3d, 0, s>>>(psi, h2, mu, lambda0, rho, n+1, (m+1)*(nzp+1));   
+    // update mu
+    // mu = mu + rho*(h2 - psi)
     lin4<<<GS3d4, BS3d, 0, s>>>(mu, h2, psi, 1, rho, -rho, n+1, (m+1)*(nzp+1));   
     cudaMemcpyAsync(fn, fm, n * n * nzp * m * sizeof(float), cudaMemcpyDefault, s);
-    
-    // // cudaDeviceSynchronize();
-    // double norm=0;
-    // for( int id=0;id< (n + 1)*(n + 1) * (m + 1) * (nzp);id++) 
-    //     norm+=sqrt(h20[id].x * h20[id].x + h20[id].y * h20[id].y + h20[id].z * h20[id].z + h20[id].w * h20[id].w);
-
-    // printf(" %f\n",lambda0*norm);
-
 }

@@ -49,6 +49,6 @@ public:
 		  int ngpus, float center, float lambda0, float lambda1);
 	~rectv();
 	// Reconstruction by the Chambolle-Pock algorithm with proximal operators
-	void run(size_t fres, size_t g, size_t theta, size_t phi, int niter, int titer);
+	void run(size_t fres, size_t g, size_t theta, size_t phi, int niter, int titer, bool dbg);
 	void adjoint_tests(size_t g, size_t theta, size_t phi);
 };

@@ -8,9 +8,9 @@ radonusfft::radonusfft(size_t n_, size_t ntheta_, size_t nz_, float center_)
 	ntheta = ntheta_;
 	nz = nz_;
 	center = center_;
-	float eps = 1e-3;
+	float eps = 1e-3; // accuracy of USFFT
 	mu = -log(eps) / (2 * n * n);
-	m = ceil(2 * n * 1 / PI * sqrt(-mu * log(eps) + (mu * n) * (mu * n) / 4));
+	m = ceil(2 * n * 1 / PI * sqrt(-mu * log(eps) + (mu * n) * (mu * n) / 4)); // interpolation radius according to accuracy
 	cudaMalloc((void **)&f, n * n * nz * sizeof(float2));
 	cudaMalloc((void **)&g, n * ntheta * nz * sizeof(float2));
 	cudaMalloc((void **)&fde, (2 * n + 2 * m) * (2 * n + 2 * m) * nz * sizeof(float2));
@@ -73,7 +73,7 @@ radonusfft::~radonusfft()
 
 void radonusfft::fwdR(float2 *g_, float2 *f_, float *theta_, cudaStream_t s)
 {	
-	//nOTE: SIZE(g) = [n,ntheta,nz]
+	//NOTE: SIZE(g) = [nz,ntheta,n]
 	cudaMemcpyAsync(f, f_, n * n * nz * sizeof(float2), cudaMemcpyDefault, s);
 	cudaMemcpyAsync(theta, theta_, ntheta * sizeof(float), cudaMemcpyDefault, s);
 	cudaMemsetAsync(fde, 0, (2 * n + 2 * m) * (2 * n + 2 * m) * nz * sizeof(float2), s);
@@ -102,7 +102,7 @@ void radonusfft::fwdR(float2 *g_, float2 *f_, float *theta_, cudaStream_t s)
 
 void radonusfft::adjR(float2 *f_, float2 *g_, float *theta_, bool filter, cudaStream_t s)
 {
-	//nOTE: SIZE(g) = [n,ntheta,nz]
+	//NOTE: SIZE(g) = [nz,ntheta,n]
 	cudaMemcpyAsync(g, g_, n * ntheta * nz * sizeof(float2), cudaMemcpyDefault, s);
 	cudaMemcpyAsync(theta, theta_, ntheta * sizeof(float), cudaMemcpyDefault, s);
 	cudaMemsetAsync(fde, 0, (2 * n + 2 * m) * (2 * n + 2 * m) * nz * sizeof(float2), s);

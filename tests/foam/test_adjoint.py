@@ -4,7 +4,7 @@
 import rectv_gpu
 import numpy as np
 import dxchange
-import tomopy
+# import tomopy
 
 def getp(a):
     return a.__array_interface__['data'][0]
