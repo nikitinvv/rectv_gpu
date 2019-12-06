@@ -9,6 +9,9 @@ import dxchange
 def getp(a):
     return a.__array_interface__['data'][0]
 
+def getp(a):
+    return a.__array_interface__['data'][0]
+
 def takephi(m, ntheta):
     [x, y] = np.meshgrid(np.arange(-ntheta//2, ntheta//2), np.arange(-m//2, m//2))
     phi = np.zeros([m, ntheta, 2], dtype='float32')

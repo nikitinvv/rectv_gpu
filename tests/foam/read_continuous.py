@@ -15,7 +15,7 @@ sino = (1300, 1364) # slices for reconstructions
 nframes = 8 # time frames for reconstruction
 frame = 94 # middle time frame for reconstruction
 nproj = 300 # number of angles for 180 degrees interval
-binning = 2 
+binning = 1 
 
 proj, flat, dark, theta = dxchange.read_aps_32id(h5fname, sino=sino, proj=((frame-nframes//2)*nproj,(frame+nframes//2)*nproj))
 theta = theta[(frame-nframes//2)*nproj:(frame+nframes//2)*nproj]
