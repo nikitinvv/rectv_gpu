@@ -24,11 +24,11 @@ if __name__ == "__main__":
     data = np.load("foambin2.npy")
     [ns, ntheta, n] = data.shape
     rot_center = n//2 # rotation center
-    lambda0 = 2e-3  # regularization parameter 1
-    lambda1 = 2  # regularization parameter 2
+    lambda0 = 1e-3  # regularization parameter 1
+    lambda1 = 4  # regularization parameter 2
     nsp = 4 # number of slices to process simultaniously by gpus
     ngpus = 4 # number of gpus
-    niter = 64  # number of ADMM iterations
+    niter = 128  # number of ADMM iterations
     titer = 4  # number of inner tomography iterations
     
     # take basis functions for decomosition 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     # memory for result
     rtv = np.zeros([ns,m,n,n], dtype='float32')
     # Run iterations
-    dbg = False # show relative convergence
+    dbg = True # show relative convergence
     cl.run(getp(rtv), getp(data), getp(theta), getp(phi),  niter, titer, dbg)
     # Save result
     for k in range(rtv.shape[0]):
