@@ -22,7 +22,7 @@ def takephi(m, ntheta):
 
 if __name__ == "__main__":
 
-    data = np.load("data2.npy")  # load continuous data
+    data = np.load("data.npy")  # load continuous data
     rot_center = 252
     nsp = 4  # number of slices to process simultaniously by gpus
     m = 8  # number of basis functions, must be a multiple of nframes
