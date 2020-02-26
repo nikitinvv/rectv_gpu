@@ -3,13 +3,12 @@ import dxchange
 import numpy as np
 import h5py
 import sys
-import skimage.feature
 
 ##################################### Inputs #########################################################################
-file_name = '/local/data/vnikitin/vincent/alignment/Chip_interlaced_9100eV_2000prj_10cycles_2s_069.h5'
-ndsets = 8
-sino_start = (512-128+50)*2
-sino_end = (512+128+50)*2
+file_name = '/data/staff/tomograms/viknik/tomoalign_vincent_data/Chip_interlaced_9100eV_2000prj_10cycles_2s_069.h5'
+ndsets = 10
+sino_start = (512-128+50+64)*2
+sino_end = (512+128+50-64)*2
 theta_start = 0
 theta_end = 200
 flat_field_norm = True
@@ -46,6 +45,6 @@ if __name__ == "__main__":
 
     prj=prj[:,:,456//pow(2,binning):-456//pow(2,binning)]
     print(np.linalg.norm(prj))
-    np.save('prjbin1',prj)        
+    np.save('prjbin12000',prj)        
     np.save('theta',theta)  
         

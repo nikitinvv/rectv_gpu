@@ -5,7 +5,7 @@ import rectv_gpu
 import numpy as np
 import dxchange
 import sys
-import tomocg as pt
+
 
 def getp(a):
     return a.__array_interface__['data'][0]
@@ -21,14 +21,14 @@ def takephi(ntheta):
 
 if __name__ == "__main__":
 
-    data = np.array(np.random.random([256,800,256]).astype('float32'),order='C')
+    data = np.array(np.random.random([256,1600,768]).astype('float32'),order='C')
     [ns, ntheta, n] = data.shape
     rot_center = n//2 # rotation center
     lambda0 = 1e-4  # regularization parameter 1
     lambda1 = 4  # regularization parameter 2
-    nsp = 2 # number of slices to process simultaniously by gpus
-    ngpus = 1 # number of gpus
-    niter = 1  # number of ADMM iterations
+    nsp = 1 # number of slices to process simultaniously by gpus
+    ngpus = 4 # number of gpus
+    niter = 4  # number of ADMM iterations
     titer = 1  # number of inner tomography iterations
     
     # take basis functions for decomosition 
@@ -52,5 +52,5 @@ if __name__ == "__main__":
     dbg = True # show relative convergence
     cl.run(getp(rtv), getp(data), getp(theta), getp(phi),  niter, titer, dbg)
     # Save result
-    for k in range(rtv.shape[0]):
-         dxchange.write_tiff_stack(rtv[k], 'rec_tv/rec_'+str(k), overwrite=True)
+    # for k in range(rtv.shape[0]):
+    #      dxchange.write_tiff_stack(rtv[k], 'rec_tv/rec_'+str(k), overwrite=True)

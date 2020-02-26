@@ -2,7 +2,7 @@
 #include <omp.h>
 #include "rectv.cuh"
 
-rectv::rectv(int n_, int ntheta_, int M_, int nz_, int nzp_, int ngpus_, float center, float lambda0_, float lambda1_)
+rectv::rectv(int n_, int ntheta_, int M_, int nz_, int nzp_, int ngpus_, float center, float lambda0_, float lambda1_, float step_)
 {
 	n = n_;
 	ntheta = ntheta_;
@@ -11,6 +11,7 @@ rectv::rectv(int n_, int ntheta_, int M_, int nz_, int nzp_, int ngpus_, float c
 	nzp = nzp_;
 	lambda0 = lambda0_;
 	lambda1 = lambda1_;
+	step = step_;
 	
 	ngpus = min(ngpus_, (int)(nz / nzp));
 	omp_set_num_threads(ngpus);

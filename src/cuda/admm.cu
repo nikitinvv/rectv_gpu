@@ -88,9 +88,9 @@ void rectv::solver_admm(float *f, float *fn, float* h1, float4* h2, float* fm, f
         lin<<<GS3d2, BS3d, 0, s>>>(h1, g, NULL, 1, -1, 0, n, ntheta, nzp);
         //backward step
         // fm = fm-0.5/lambda1 \nabla* h2
-        divergent(fm, h2, -0.5/max(lambda1,1.0), igpu, s);        
+        divergent(fm, h2, -step, igpu, s);        
         // fm = fm-0.5/lambda1 \Rad* h1
-        radonapradj(fm, h1, -0.5/max(lambda1,1.0), igpu, s);   
+        radonapradj(fm, h1, -step, igpu, s);   
     }    
     //forward step
     // h2 = \nabla fm

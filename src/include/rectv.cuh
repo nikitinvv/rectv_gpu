@@ -11,7 +11,7 @@ class rectv
 	int nzp;
 	float lambda0;
 	float lambda1;
-
+	float step;
 	dim3 BS2d, BS3d, GS2d0, GS3d0, GS3d1, GS3d2, GS3d3, GS3d4;
 
 	//number of gpus
@@ -46,7 +46,7 @@ class rectv
 	
 public:
 	rectv(int n, int ntheta, int m, int nz, int nzp,
-		  int ngpus, float center, float lambda0, float lambda1);
+		  int ngpus, float center, float lambda0, float lambda1, float step);
 	~rectv();
 	// Reconstruction by the Chambolle-Pock algorithm with proximal operators
 	void run(size_t fres, size_t g, size_t theta, size_t phi, int niter, int titer, bool dbg);

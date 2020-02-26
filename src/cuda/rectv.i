@@ -23,6 +23,7 @@ class rectv
 	float tau;
 	float lambda0;
 	float lambda1;
+	float step;
 
 	//number of gpus
 	int ngpus;
@@ -57,7 +58,7 @@ class rectv
 	void solver_admm(float *f, float *fn, float *h1, float4 *h2, float *g, float4* psi, float4* mu, int iz, int titer, int igpu, cudaStream_t s);	
 public:
 	rectv(int n, int ntheta, int m, int nz, int nzp,
-		  int ngpus, float center, float lambda0, float lambda1);
+		  int ngpus, float center, float lambda0, float lambda1, float step);
 	~rectv();
 	
 	void run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, int titer, bool dbg);

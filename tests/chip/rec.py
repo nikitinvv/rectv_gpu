@@ -5,7 +5,7 @@ import rectv_gpu
 import numpy as np
 import dxchange
 import sys
-import tomocg as pt
+#import tomocg as pt
 
 def getp(a):
     return a.__array_interface__['data'][0]
@@ -28,8 +28,8 @@ if __name__ == "__main__":
     lambda0 = 1e-7  # regularization parameter 1
     lambda1 = 4  # regularization parameter 2
     nsp = 16 # number of slices to process simultaniously by gpus
-    ngpus = 8 # number of gpus
-    niter = 512  # number of ADMM iterations
+    ngpus = 4 # number of gpus
+    niter = 128  # number of ADMM iterations
     titer = 4  # number of inner tomography iterations
     
     # take basis functions for decomosition 
@@ -40,12 +40,12 @@ if __name__ == "__main__":
                          nsp, ngpus, rot_center, lambda0, lambda1)
     # angles
     theta = np.linspace(0, 8*np.pi, ntheta, endpoint=False).astype('float32')  
-    for k in range(8):
-        with pt.SolverTomo(theta[k*128:(k+1)*128], ntheta//8, ns, n, 128, 64) as slv:
-            # generate data
-            u = np.zeros([ns,n,n],dtype='complex64')
-            u = slv.cg_tomo_batch(data.swapaxes(0,1)[k*128:(k+1)*128]+1j*0,u,64)
-            dxchange.write_tiff_stack(u.real, 'rec_cg/rec_'+str(k), overwrite=True)
+    # for k in range(8):
+    #     with pt.SolverTomo(theta[k*128:(k+1)*128], ntheta//8, ns, n, 128, 64) as slv:
+    #         # generate data
+    #         u = np.zeros([ns,n,n],dtype='complex64')
+    #         u = slv.cg_tomo_batch(data.swapaxes(0,1)[k*128:(k+1)*128]+1j*0,u,64)
+    #         dxchange.write_tiff_stack(u.real, 'rec_cg/rec_'+str(k), overwrite=True)
     # memory for result\
     #exit()
     rtv = np.zeros([ns,m,n,n], dtype='float32')
