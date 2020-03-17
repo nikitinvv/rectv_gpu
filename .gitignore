@@ -15,6 +15,9 @@ _skbuild/
 # nfs
 .nfs*
 
+*.tiff
+*.npy
+
 # Distribution / packaging
 .Python
 build/
