@@ -8,7 +8,7 @@ import tomopy
 import dxchange
 
 h5fname = "/data/staff/tomograms/viknik/foam/149_ASM_SP_1ktps.h5"
-sino = (32, 96) # slices for reconstructions
+sino = (0, 120) # slices for reconstructions
 nframes = 8 # time frames for reconstruction
 frame = (1487780)//40 # middle time frame for reconstruction
 nproj = 40 # number of angles for 180 degrees interval
@@ -29,7 +29,9 @@ data = tomopy.remove_stripe_fw(
 data = tomopy.remove_nan(data, val=0.0)
 data = tomopy.remove_neg(data, val=0.00)
 data[np.where(data == np.inf)] = 0.00
-data = tomopy.prep.phase.retrieve_phase(data, pixel_size=0.00025, dist=50, energy=20, alpha=0.015, pad=True)
-# reshape for 4d
-data = np.reshape(data,[nframes*nproj,data.shape[1],data.shape[2]])
-np.save('foam',data.swapaxes(0,1))
+alphaa = [100]
+for k in range(len(alphaa)):
+    data = tomopy.prep.phase.retrieve_phase(data, pixel_size=0.00025, dist=20, energy=20, alpha=1/alphaa[k], pad=True)
+    # reshape for 4d
+    data = np.reshape(data,[nframes*nproj,data.shape[1],data.shape[2]])
+    np.save('foam'+str(alphaa[k]),data.swapaxes(0,1))

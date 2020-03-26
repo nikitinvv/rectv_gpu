@@ -22,17 +22,17 @@ def takephi(ntheta):
 
 if __name__ == "__main__":
 
-    data = np.array(np.load("foam.npy").astype('float32'),order='C')
+    data = np.array(np.load("foam100.npy")[:,:,8:-8].astype('float32'),order='C')
     [ns, ntheta, n] = data.shape
     print([ns,ntheta,n])
     rot_center = n//2-1.5 # rotation center
-    lambda0a = [1e-3,5e-3,1e-2,5e-4]  # regularization parameter 1
-    lambda1a = [16]#,32,64,8]  # regularization parameter 2
-    nsp = 2 # number of slices to process simultaniously by gpus
+    lambda0a = [1e-3]  # regularization parameter 1
+    lambda1a = [16,32,64,8]  # regularization parameter 2
+    nsp = 1 # number of slices to process simultaniously by gpus
     ngpus = 4 # number of gpus
-    niter = 512  # number of ADMM iterations
+    niter = 1024  # number of ADMM iterations
     titer = 4  # number of inner tomography iterations
-    
+        
     # take basis functions for decomosition 
     phi = takephi(ntheta) 
     m = phi.shape[0] # number of basis functions
@@ -41,7 +41,7 @@ if __name__ == "__main__":
         for j in range(len(lambda1a)):
             lambda0=lambda0a[k]
             lambda1=lambda1a[j]
-            step = 4/(lambda1**2)
+            step = 0.5
             cl = rectv_gpu.rectv(n, ntheta, m, ns,
                          nsp, ngpus, rot_center, lambda0, lambda1, step)
             # angles
@@ -52,8 +52,9 @@ if __name__ == "__main__":
             dbg = True # show relative convergence
             cl.run(getp(rtv), getp(data), getp(theta), getp(phi),  niter, titer, dbg)
             # Save result
-            for kk in range(rtv.shape[0]):
-                dxchange.write_tiff_stack(rtv[kk], 'rec_tv'+str(lambda0)+str(lambda1)+'/rec_'+str(kk), overwrite=True)
-            dxchange.write_tiff_stack(np.rot90(rtv[32],1,axes=(1,2))[:,200:350,200:450], 'rec_tvtime'+str(m)+str(lambda0)+str(lambda1)+'/rec.tiff', overwrite=True)
+            #rtv = rtv[:,:,rtv.shape[2]//6:-rtv.shape[2]//6,rtv.shape[2]//6:-rtv.shape[2]//6]
+            for kk in range(rtv.shape[1]):
+                dxchange.write_tiff_stack(rtv[:,kk], 'rec_tv'+str(m)+str(lambda0)+str(lambda1)+'/rec_'+str(kk)+'_', overwrite=True)
+            # dxchange.write_tiff_stack(np.rot90(rtv[32],1,axes=(1,2))[:,200:350,200:450], 'rec_tvtime'+str(m)+str(lambda0)+str(lambda1)+'/rec.tiff', overwrite=True)
             #dxchange.write_tiff(np.rot90(rtv[16,7],1,axes=(1,2)), 'rec_tvtimenew/'+str(lambda0)+str(lambda1)+'.tiff', overwrite=True)
             cl=[]

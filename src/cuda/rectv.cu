@@ -102,7 +102,13 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 	memset(mu, 0, (n + 1) * (n + 1) * (m + 1) * (nzp + 1) * nz / nzp * sizeof(float4));
 
 	float start = omp_get_wtime();
-	
+	cudaDeviceSynchronize();
+	double norms = 0;
+					for (int k = 0; k < n * ntheta *  nz; k++)
+						norms+= g[k]*g[k];
+	fprintf(stderr,"%f\n",norms)	;	
+	fflush(stdout);		
+	int nsuccess =0;
 #pragma omp parallel
 	{
 		int igpu = omp_get_thread_num();
@@ -196,19 +202,46 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 #pragma omp barrier
 #pragma omp single
 			{
-				float *tmp = 0;				
-				tmp = f;
-				f = fn;
-				fn = tmp;
-				
-				if (dbg)
+				if (1)
 				{
 					double norm=0;
 					for (int k = 0; k < n * n * m * nz; k++)
 						norm += (fn[k] - f[k]) * (fn[k] - f[k]);
 					fprintf(stderr, "iterations (%d/%d) f:%f\n", iter, niter, norm);
 					fflush(stdout);
+					if(norm<norms)
+					{
+						float *tmp = 0;				
+						tmp = f;
+						f = fn;
+						fn = tmp;
+						
+						norms=norm;						
+						nsuccess++;
+					}
+					else
+					{
+						// float4 *psi0 = &psi[(n + 1) * (n + 1) * (m + 1) * iz * (nzp + 1)];
+			// float4 *mu0 = &mu[(n + 1) * (n + 1) * (m + 1) * iz * (nzp + 1)];
+						if(nsuccess<16)
+						{//restart everything
+							cudaMemset(f,0,n*n*m*nz*sizeof(float));
+							cudaMemset(fn,0,n*n*m*nz*sizeof(float));
+							cudaMemset(mu,0,(n + 1) * (n + 1) * (m + 1) * nz * (nzp + 1)*sizeof(float4));
+							cudaMemset(psi,0,(n + 1) * (n + 1) * (m + 1) * nz * (nzp + 1)*sizeof(float4));
+						}
+						else
+						{//restart iteration
+							cudaMemcpy(fn,f,n*n*m*nz*sizeof(float),cudaMemcpyDefault);
+						}						
+						step/=2;
+						fprintf(stderr, "decrease step to :%f\n", step);
+						fflush(stdout);
+					}
 				}
+
+				
+
 			}
 		}
 		cudaDeviceSynchronize();
