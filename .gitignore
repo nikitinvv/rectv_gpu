@@ -217,3 +217,9 @@ dkms.conf
 *radonusfft.py
 *ptychofft.py
 *_wrap.cpp
+
+
+*resrec*
+*.png
+*.err
+*.out
