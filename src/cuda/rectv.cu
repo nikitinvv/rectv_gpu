@@ -2,17 +2,10 @@
 #include <omp.h>
 #include "rectv.cuh"
 
-rectv::rectv(int n_, int ntheta_, int M_, int nz_, int nzp_, int ngpus_, float center, float lambda0_, float lambda1_, float step_)
-{
-	n = n_;
-	ntheta = ntheta_;
-	m = M_;
-	nz = nz_;
+rectv::rectv(int n, int ntheta, int m, int nz, int nzp_, int ngpus_)
+ : n(n), ntheta(ntheta), m(m), nz(nz) {
+
 	nzp = nzp_;
-	lambda0 = lambda0_;
-	lambda1 = lambda1_;
-	step = step_;
-	
 	ngpus = min(ngpus_, (int)(nz / nzp));
 	omp_set_num_threads(ngpus);
 	//Managed memory on GPU
@@ -47,7 +40,7 @@ rectv::rectv(int n_, int ntheta_, int M_, int nz_, int nzp_, int ngpus_, float c
 	for (int igpu = 0; igpu < ngpus; igpu++)
 	{
 		cudaSetDevice(igpu);
-		rad[igpu] = new radonusfft(n, ntheta, nzp, center);
+		rad[igpu] = new radonusfft(n, ntheta, nzp);
 		cudaMalloc((void **)&ftmp[igpu], 2 * (n + 2) * (n + 2) * (m + 2) * (nzp + 2) * sizeof(float));
 		cudaMalloc((void **)&gtmp[igpu], 2 * n * ntheta * nzp * sizeof(float));
 		cudaMalloc((void **)&ftmps[igpu], 2 * n * n * nzp * sizeof(float));
@@ -58,35 +51,56 @@ rectv::rectv(int n_, int ntheta_, int M_, int nz_, int nzp_, int ngpus_, float c
 		cudaMalloc((void **)&theta[igpu], ntheta * sizeof(float));		
 	}
 	cudaDeviceSynchronize();
+	is_free = false;
 }
 
-rectv::~rectv()
+rectv::~rectv() { free(); }
+
+void rectv::free()
 {
-	cudaFree(f);
-	cudaFree(fn);
-	cudaFree(fm);
-	cudaFree(g);
-	cudaFree(psi);
-	cudaFree(mu);
-	for (int igpu = 0; igpu < ngpus; igpu++)
+	if (!is_free) 
 	{
-		cudaSetDevice(igpu);
-		delete rad[igpu];
-		cudaFree(ftmp[igpu]);
-		cudaFree(gtmp[igpu]);
-		cudaFree(ftmps[igpu]);
-		cudaFree(fm[igpu]);
-		cudaFree(h1[igpu]);
-		cudaFree(h2[igpu]);		
-		cudaFree(phi[igpu]);
-		cudaFree(theta[igpu]);
-		cudaDeviceReset();
+		cudaFree(f);
+		cudaFree(fn);
+		cudaFree(fm);
+		cudaFree(g);
+		cudaFree(psi);
+		cudaFree(mu);
+		for (int igpu = 0; igpu < ngpus; igpu++)
+		{
+			cudaSetDevice(igpu);
+			delete rad[igpu];
+			cudaFree(ftmp[igpu]);
+			cudaFree(gtmp[igpu]);
+			cudaFree(ftmps[igpu]);
+			cudaFree(fm[igpu]);
+			cudaFree(h1[igpu]);
+			cudaFree(h2[igpu]);		
+			cudaFree(phi[igpu]);
+			cudaFree(theta[igpu]);
+			cudaDeviceReset();
+		}
+		is_free = true;
 	}
 }
 
-void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, int titer, bool dbg)
+void rectv::set_center(float center)
 {
-	//data
+	for (int igpu = 0; igpu < ngpus; igpu++)
+	{
+		cudaSetDevice(igpu);
+		rad[igpu]->set_center(center);
+	}
+}
+
+void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, 
+	float center, float lambda0, float lambda1, float step, 
+	int niter, int titer, bool dbg)
+{
+	//update center with a given one
+	set_center(center);
+	
+	//copy data
 	cudaMemcpy(g, (float*)g_, n * ntheta * nz * sizeof(float), cudaMemcpyHostToHost);
 	//angles and basis functions to each gpu
 	for (int igpu = 0; igpu < ngpus; igpu++)
@@ -104,9 +118,9 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 	float start = omp_get_wtime();
 	cudaDeviceSynchronize();
 	double norms = 0;
-					for (int k = 0; k < n * ntheta *  nz; k++)
-						norms+= g[k]*g[k];
-	fprintf(stderr,"%f\n",norms)	;	
+	for (int k = 0; k < n * ntheta *  nz; k++)
+		norms+= g[k]*g[k];
+	fprintf(stderr,"%f\n",norms);	
 	fflush(stdout);		
 	int nsuccess =0;
 #pragma omp parallel
@@ -153,7 +167,7 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 				float* fm0 = &fm[igpu][(iz != 0) * n * n * m];//modifyable version of f
     			cudaMemcpyAsync(&fm0[-(iz != 0) * n * n * m],&f0[-(iz != 0) * n * n * m],n*n*(nzp + 2 - (iz == 0) - (iz == nz / nzp - 1))*m* sizeof(float), cudaMemcpyDefault, s1); //mem+=n*n*m*(nzp+2-(iz==0)-(iz==nz/nzp-1))*sizeof(float);
 				// ADMM
-				solver_admm(f0, fn0, h10, h20, fm0, g0, psi0, mu0, iz, titer, igpu, s1);
+				solver_admm(f0, fn0, h10, h20, fm0, g0, psi0, mu0, lambda0, lambda1, step, iz, titer, igpu, s1);
 
 				cudaEventRecord(e1, s1);
 				if (iz < (igpu + 1) * nz / nzp / ngpus - 1)
@@ -202,46 +216,38 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 #pragma omp barrier
 #pragma omp single
 			{
-				if (1)
+				double norm=0;
+				for (int k = 0; k < n * n * m * nz; k++)
+					norm += (fn[k] - f[k]) * (fn[k] - f[k]);
+				fprintf(stderr, "iterations (%d/%d) f:%f\n", iter, niter, norm);
+				fflush(stdout);
+				if(norm<norms)
 				{
-					double norm=0;
-					for (int k = 0; k < n * n * m * nz; k++)
-						norm += (fn[k] - f[k]) * (fn[k] - f[k]);
-					fprintf(stderr, "iterations (%d/%d) f:%f\n", iter, niter, norm);
-					fflush(stdout);
-					if(norm<norms)
-					{
-						float *tmp = 0;				
-						tmp = f;
-						f = fn;
-						fn = tmp;
-						
-						norms=norm;						
-						nsuccess++;
+					float *tmp = 0;				
+					tmp = f;
+					f = fn;
+					fn = tmp;
+					
+					norms=norm;						
+					nsuccess++;
+				}
+				else
+				{
+					if(nsuccess<16)
+					{//restart everything
+						cudaMemset(f,0,n*n*m*nz*sizeof(float));
+						cudaMemset(fn,0,n*n*m*nz*sizeof(float));
+						cudaMemset(mu,0,(n + 1) * (n + 1) * (m + 1) * nz * (nzp + 1)*sizeof(float4));
+						cudaMemset(psi,0,(n + 1) * (n + 1) * (m + 1) * nz * (nzp + 1)*sizeof(float4));
 					}
 					else
-					{
-						// float4 *psi0 = &psi[(n + 1) * (n + 1) * (m + 1) * iz * (nzp + 1)];
-			// float4 *mu0 = &mu[(n + 1) * (n + 1) * (m + 1) * iz * (nzp + 1)];
-						if(nsuccess<16)
-						{//restart everything
-							cudaMemset(f,0,n*n*m*nz*sizeof(float));
-							cudaMemset(fn,0,n*n*m*nz*sizeof(float));
-							cudaMemset(mu,0,(n + 1) * (n + 1) * (m + 1) * nz * (nzp + 1)*sizeof(float4));
-							cudaMemset(psi,0,(n + 1) * (n + 1) * (m + 1) * nz * (nzp + 1)*sizeof(float4));
-						}
-						else
-						{//restart iteration
-							cudaMemcpy(fn,f,n*n*m*nz*sizeof(float),cudaMemcpyDefault);
-						}						
-						step/=2;
-						fprintf(stderr, "decrease step to :%f\n", step);
-						fflush(stdout);
-					}
+					{//restart iteration
+						cudaMemcpy(fn,f,n*n*m*nz*sizeof(float),cudaMemcpyDefault);
+					}						
+					step/=2;
+					fprintf(stderr, "decrease step to :%f\n", step);
+					fflush(stdout);
 				}
-
-				
-
 			}
 		}
 		cudaDeviceSynchronize();
@@ -253,3 +259,44 @@ void rectv::run(size_t fres, size_t g_, size_t theta_, size_t phi_, int niter, i
 	cudaMemcpy((float*)fres, f, n * n * m * nz * sizeof(float), cudaMemcpyDefault);
 }
 
+
+void rectv::check_adjoints(size_t res_, size_t g_, size_t theta_, size_t phi_, float lambda1, float center)
+{
+	double* res = (double*)res_;
+    // only for 1 gpu and 1 slice set    
+    //update center with a given one
+	set_center(center);
+    // Rapr
+    cudaMemcpy(g, (float*)g_, n * ntheta * nz * sizeof(float), cudaMemcpyDefault);
+    cudaMemcpy(theta[0], (float*)theta_, ntheta * sizeof(float), cudaMemcpyDefault);
+    cudaMemcpy(phi[0], (float*)phi_, 2 * ntheta * m * sizeof(float), cudaMemcpyDefault);
+
+    radonapradj(f, g, 1, 0, 0);
+    radonapr(h1[0], f, 1, 0, 0);
+    
+    float *ftmp = new float[n * n * nz * m];
+    float *h1tmp = new float[n * ntheta * nz];
+    cudaMemcpy(ftmp, f, n * n * nz * m * sizeof(float), cudaMemcpyDefault);    
+    cudaMemcpy(h1tmp, h1[0], n * ntheta * nz * sizeof(float), cudaMemcpyDefault);
+    for (int k = 0; k < n * n * nz * m; k++) res[0] += ftmp[k] * ftmp[k];
+    for (int k = 0; k < n * ntheta * nz; k++) res[1] += ((float*)g_)[k] * h1tmp[k];
+    for (int k = 0; k < n * ntheta * nz; k++) res[2] += h1tmp[k] * h1tmp[k];
+    // printf("Adjoint test for Rapr: %f ? %f\n", res[0], res[1]);
+    // printf("normalization test for Rapr: %f ? %f\n", res[1], res[2]);
+    
+    // gradient
+    gradient(h2[0], f, lambda1, 0, 0, 0);
+   
+    divergent(fn, h2[0], lambda1, 1,  0, 0);
+     
+    float *fntmp = new float[n * n * nz * m];
+    float *h2tmp = new float[(n + 1) * (n + 1) * (m + 1) * (nz + 1)  * sizeof(float4)];
+    cudaMemcpy(fntmp, fn, n * n * nz * m * sizeof(float), cudaMemcpyDefault);    
+    cudaMemcpy(h2tmp, h2[0], (n + 1) * (n + 1) * (m + 1) * (nz + 1) *  sizeof(float4), cudaMemcpyDefault);
+    for (int k = 0; k < n * n * nz * m; k++) res[3] += ftmp[k] * fntmp[k];
+    for (int k = 0; k < (n + 1) * (n + 1) * (m + 1) * (nz + 1); k++) res[4] += h2tmp[k] * h2tmp[k];
+    for (int k = 0; k < n * n * nz * m; k++) res[5] += fntmp[k] * fntmp[k];
+    // printf("Adjoint test for grad: %f ? %f\n", res[3], res[4]);
+    // printf("normalization test for grad: %f ? %f\n", res[4], res[5]);
+    
+}

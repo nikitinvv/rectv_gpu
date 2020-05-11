@@ -3,17 +3,9 @@
 
 class rectv
 {
-	//parameters
-	int n;
-	int ntheta;
-	int m;
-	int nz;
-	int nzp;
-	float lambda0;
-	float lambda1;
-	float step;
+	bool is_free;
+	int nzp;	
 	dim3 BS2d, BS3d, GS2d0, GS3d0, GS3d1, GS3d2, GS3d3, GS3d4;
-
 	//number of gpus
 	int ngpus;
 
@@ -40,15 +32,23 @@ class rectv
 	
 	void radonapr(float *g, float *f, float tau, int igpu, cudaStream_t s);
 	void radonapradj(float *f, float *g, float tau, int igpu, cudaStream_t s);
-	void gradient(float4 *g, float *f, int iz, int igpu, cudaStream_t s);
-	void divergent(float *fn, float4 *g, float tau, int igpu, cudaStream_t s);
-	void solver_admm(float *f, float *fn, float *h1, float4 *h2, float* fm, float *g, float4 *psi, float4 *mu, int iz, int titer, int igpu, cudaStream_t s);
+	void gradient(float4 *g, float *f, float lambda1, int iz, int igpu, cudaStream_t s);
+	void divergent(float *fn, float4 *g, float lambda1, float tau, int igpu, cudaStream_t s);
+	void solver_admm(float *f, float *fn, float *h1, float4 *h2, float* fm, float *g, float4 *psi, float4 *mu, 
+		float lambda0, float lambda1, float step, 
+		int iz, int titer, int igpu, cudaStream_t s);
+	void set_center(float center);
 	
 public:
-	rectv(int n, int ntheta, int m, int nz, int nzp,
-		  int ngpus, float center, float lambda0, float lambda1, float step);
+	int n;
+	int ntheta;
+	int m;
+	int nz;
+	rectv(int n, int ntheta, int m, int nz, int nzp, int ngpus);
 	~rectv();
-	// Reconstruction by the Chambolle-Pock algorithm with proximal operators
-	void run(size_t fres, size_t g, size_t theta, size_t phi, int niter, int titer, bool dbg);
-	void adjoint_tests(size_t g, size_t theta, size_t phi);
+	void run(size_t fres, size_t g, size_t theta, size_t phi, 
+		float center, float lambda0, float lambda1, float step, 
+		int niter, int titer, bool dbg);
+	void check_adjoints(size_t res,size_t g, size_t theta, size_t phi, float lambda1, float center);
+	void free();
 };

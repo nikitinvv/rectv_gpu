@@ -2,12 +2,11 @@
 #include "kernels_radonusfft.cuh"
 #include <stdio.h>
 
-radonusfft::radonusfft(size_t n_, size_t ntheta_, size_t nz_, float center_)
+radonusfft::radonusfft(size_t n_, size_t ntheta_, size_t nz_)
 {
 	n = n_;
 	ntheta = ntheta_;
 	nz = nz_;
-	center = center_;
 	float eps = 1e-3; // accuracy of USFFT
 	mu = -log(eps) / (2 * n * n);
 	m = ceil(2 * n * 1 / PI * sqrt(-mu * log(eps) + (mu * n) * (mu * n) / 4)); // interpolation radius according to accuracy
@@ -44,11 +43,8 @@ radonusfft::radonusfft(size_t n_, size_t ntheta_, size_t nz_, float center_)
 	
   	cudaMalloc((void **)&shiftfwd, n * sizeof(float2));
   	cudaMalloc((void **)&shiftadj, n * sizeof(float2));
-  	// compute shifts with respect to the rotation center
-  	takeshift <<<ceil(n / 1024.0), 1024>>> (shiftfwd, -(center - n / 2.0), n);
-  	takeshift <<<ceil(n / 1024.0), 1024>>> (shiftadj, (center - n / 2.0), n);
-
-	BS2d = dim3(32, 32);
+		
+  	BS2d = dim3(32, 32);
 	BS3d = dim3(32, 32, 1);
 
 	GS2d0 = dim3(ceil(n / (float)BS2d.x), ceil(ntheta / (float)BS2d.y));
@@ -71,6 +67,13 @@ radonusfft::~radonusfft()
 	cufftDestroy(plan1d);
 }
 
+void radonusfft::set_center(float center)
+{
+	// compute shifts with respect to the rotation center
+  	takeshift <<<ceil(n / 1024.0), 1024>>> (shiftfwd, -(center - n / 2.0), n);
+  	takeshift <<<ceil(n / 1024.0), 1024>>> (shiftadj, (center - n / 2.0), n);
+}
+	
 void radonusfft::fwdR(float2 *g_, float2 *f_, float *theta_, cudaStream_t s)
 {	
 	//NOTE: SIZE(g) = [nz,ntheta,n]
