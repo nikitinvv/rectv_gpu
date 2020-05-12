@@ -19,7 +19,7 @@ __global__ void extendf(float *fe, float *f, int flgl, int flgr, int N, int M, i
 	fe[id0] = f[id];
 }
 
-__global__ void gradf(float4 *h2, float *f, float lambda1, int N, int M, int Nz)
+__global__ void gradf(float4 *h2, float *f, float lambda1, int N, int M, int Nz, int Ntheta)
 {
 	int tx = blockIdx.x * blockDim.x + threadIdx.x;
 	int ty = blockIdx.y * blockDim.y + threadIdx.y;
@@ -43,7 +43,7 @@ __global__ void gradf(float4 *h2, float *f, float lambda1, int N, int M, int Nz)
 	h2[id0].w =  (f[idz] - f[id]) / 2/cbrtf(2)/(lambda1/2);
 }
 
-__global__ void div(float *fn, float4 *h2, float tau, float lambda1, int N, int M, int Nz)
+__global__ void div(float *fn, float4 *h2, float tau, float lambda1, int N, int M, int Nz, int Ntheta)
 {
 	int tx = blockIdx.x * blockDim.x + threadIdx.x;
 	int ty = blockIdx.y * blockDim.y + threadIdx.y;

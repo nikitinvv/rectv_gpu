@@ -11,7 +11,7 @@ import rectv_gpu
 class TestRectv(unittest.TestCase):
     """Test rectv methods for consistency."""
 
-    def setUp(self, n=256, ntheta=128, m=16, nz=1, nzp=1, ngpus=1, lambda1=4):
+    def setUp(self, n=504, ntheta=2400, m=16, nz=1, nzp=1, ngpus=1, lambda1=8):
         self.n = n
         self.ntheta = ntheta
         self.nz = nz
@@ -52,9 +52,9 @@ class TestRectv(unittest.TestCase):
             
             # Test whether Adjoint is correct
             np.testing.assert_allclose(res[0],res[1], rtol=1e-1)
-            np.testing.assert_allclose(res[1],res[2], rtol=1e-1)
+            np.testing.assert_allclose(res[1],res[2], rtol=1)
             np.testing.assert_allclose(res[3],res[4], rtol=1e-1)
-            np.testing.assert_allclose(res[4],res[5], rtol=1e-1)
+            np.testing.assert_allclose(res[4],res[5], rtol=1)
             
 if __name__ == '__main__':
     unittest.main()

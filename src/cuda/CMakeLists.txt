@@ -19,7 +19,7 @@ find_package(OpenMP)
 # Must tell CMake that SWIG interface files are CXX files
 set_source_files_properties(rectv.i PROPERTIES CPLUSPLUS ON)
 swig_add_library(rectv LANGUAGE python SOURCES rectv.i rectv.cu radonusfft.cu admm.cu operators.cu)
-swig_link_libraries(rectv cudart cufft OpenMP::OpenMP_CXX)
+swig_link_libraries(rectv cudart cufft cublas OpenMP::OpenMP_CXX)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --compiler-options -fopenmp")
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rectv.py" DESTINATION rectv_gpu)

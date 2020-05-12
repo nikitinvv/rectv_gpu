@@ -62,10 +62,10 @@ void rectv::gradient(float4 *h2, float *f, float lambda1, int iz, int igpu, cuda
     float *ftmp0 = ftmp[igpu];
     //repeat border values
     extendf<<<GS3d3, BS3d, 0, s>>>(ftmp0, f, iz != 0, iz != nz / nzp - 1, n + 2, m + 2, nzp + 2);
-    gradf<<<GS3d3, BS3d, 0, s>>>(h2, ftmp0, lambda1, n + 1, m + 1, nzp + 1);
+    gradf<<<GS3d3, BS3d, 0, s>>>(h2, ftmp0, lambda1, n + 1, m + 1, nzp + 1, ntheta);
 }
 
 void rectv::divergent(float *fn, float4 *h2, float lambda1, float tau, int igpu, cudaStream_t s)
 {
-    div<<<GS3d0, BS3d, 0, s>>>(fn, h2, tau, lambda1, n, m, nzp);
+    div<<<GS3d0, BS3d, 0, s>>>(fn, h2, tau, lambda1, n, m, nzp, ntheta);
 }

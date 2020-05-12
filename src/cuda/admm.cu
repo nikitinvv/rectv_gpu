@@ -1,6 +1,6 @@
 
 #include "rectv.cuh"
-#include "stdio.h"
+
 
 __global__ void lin(float *f, float *g, float *h, float a, float b, float c, int n, int ntheta, int nz)
 {
@@ -54,6 +54,7 @@ __global__ void solve_reg_ker(float4* psi, float4 *h2, float4* mu, float lambda,
                      psi[id0].y * psi[id0].y + 
                      psi[id0].z * psi[id0].z + 
                      psi[id0].w * psi[id0].w);
+    
 	if (za <= lambda / rho)
 	{
 		psi[id0].x = 0;
@@ -70,11 +71,12 @@ __global__ void solve_reg_ker(float4* psi, float4 *h2, float4* mu, float lambda,
 	}
 }
 
-void rectv::solver_admm(float *f, float *fn, float* h1, float4* h2, float* fm, float *g, float4 *psi, float4 *mu, 
-    float lambda0, float lambda1, float step, 
+float2 rectv::solver_admm(float *f, float *fn, float* h1, float4* h2, float4* h2stored, float* fm, float *g, float4 *psi, float4 *mu, 
+    float lambda0, float lambda1, float rho,
     int iz, int titer, int igpu, cudaStream_t s)
 {
-    float rho = 0.5;
+    //float rho = sqrt(ntheta*lambda1/m)/32;
+    gradient(h2stored, fm, lambda1,  iz, igpu, s); //iz for border control      
     
     for (int k=0;k<titer;k++)
     {
@@ -89,10 +91,10 @@ void rectv::solver_admm(float *f, float *fn, float* h1, float4* h2, float* fm, f
         // h1 = h1-g
         lin<<<GS3d2, BS3d, 0, s>>>(h1, g, NULL, 1, -1, 0, n, ntheta, nzp);
         //backward step
-        // fm = fm-0.5/lambda1 \nabla* h2
-        divergent(fm, h2, lambda1, -step, igpu, s);        
-        // fm = fm-0.5/lambda1 \Rad* h1
-        radonapradj(fm, h1, -step, igpu, s);   
+        // fm = fm-0.5 \nabla* h2
+        divergent(fm, h2, lambda1, -0.5, igpu, s);        
+        // fm = fm-0.5 \Rad* h1
+        radonapradj(fm, h1, -0.5, igpu, s);   
     }    
     //forward step
     // h2 = \nabla fm
@@ -103,5 +105,18 @@ void rectv::solver_admm(float *f, float *fn, float* h1, float4* h2, float* fm, f
     // update mu
     // mu = mu + rho*(h2 - psi)
     lin4<<<GS3d4, BS3d, 0, s>>>(mu, h2, psi, 1, rho, -rho, n+1, (m+1)*(nzp+1));   
+    // h2stored=h2stored-h2
+    lin4<<<GS3d4, BS3d, 0, s>>>(h2stored, h2stored, h2, 1, 0, -1, n+1, (m+1)*(nzp+1));       
+    // h2=h2-psi
+    lin4<<<GS3d4, BS3d, 0, s>>>(h2, h2, psi, 1, 0, -1, n+1, (m+1)*(nzp+1));   
     cudaMemcpyAsync(fn, fm, n * n * nzp * m * sizeof(float), cudaMemcpyDefault, s);
+    //compute norms for rho updates
+    float2 normdiff;
+    cublasSetStream(cublas_handles[igpu],s);
+    cublasSnrm2(cublas_handles[igpu], 4*(n + 1) * (n + 1) * (m + 1) * (nzp + 1), (float*)h2, 1, &normdiff.x);
+    cublasSnrm2(cublas_handles[igpu], 4*(n + 1) * (n + 1) * (m + 1) * (nzp + 1), (float*)h2stored, 1, &normdiff.y);
+
+
+
+    return normdiff;
 }
