@@ -1,33 +1,36 @@
 # rectv_gpu
 # Four-dimensional tomographic reconstruction by time domain decomposition
 
-# Installation
+## Clone git repository
 
-## Building python modules
-Set `CUDAHOME` environmental variable, run
+`git clone https://github.com/nikitinvv/rectv_gpu`
 
-`python setup.py install`
+## Installation MAX IV
 
-## Simple reconstruction scenario
-Read, filter, normalize data and save it to file 'data.npy'
+`module add  GCC/8.2.0-2.31.1 icc/2019.1.144-GCC-8.2.0-2.31.1 ifort/2019.1.144-GCC-8.2.0-2.31.1 CUDA/10.1.105`
 
-`python read_continuous`
+`conda install -c conda-forge dxchange scikit-build`
 
-Reconstruct with the time-domain decompositon + regularization
-`python rec_simple.py`
+`cd rectv_gpu; python setup.py install`
 
+## Use MAX IV gn1-3 nodes for remote jupyter notebook
 
-## Use as a module 
-See an example in tomobank https://tomobank.readthedocs.io/en/latest/source/data/docs.data.dynamic.html#foam-data
+Allocate GPU resources:
 
-`python tomopy_rectv.py dk_MCFG_1_p_s1_.h5 --type subset --nsino 0.75 --binning 2 --tv True --frame 95`
+`salloc -p v100`
 
-`--type` - reconstruction type (slice,subset,full)
+In remote host (e.g. gn1), open the terminal, change directory to where you have your notebooks and type:
 
-`--nsino` - location of the sinogram used by slice or subset reconstruction (0 top, 1 bottom)
+`jupyter notebook --no-browser --port=13541`
 
-`--binning` - factor for data downsampling (0,1,2)
+In your local computer type:
 
-`--tv` - use tv reconstruction (True,False)
+`ssh -N -f -L localhost:13542:localhost:13541 username@yw-picard07-clu0-gn-1.maxiv.lu.se`
 
-`--frame` - central time frame for reconstruction, 8 time frames will be reconstructed by default. Example `--frame 95` gives time frames [91,99)
+Now open web browser (google chrome, firefox, ...) and type:
+
+`localhost:13542`
+
+## Examples with jupyter notebook
+
+See examples/
