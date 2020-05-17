@@ -9,7 +9,7 @@
 
 `module add  GCC/8.2.0-2.31.1 icc/2019.1.144-GCC-8.2.0-2.31.1 ifort/2019.1.144-GCC-8.2.0-2.31.1 CUDA/10.1.105`
 
-`conda install -c conda-forge dxchange scikit-build`
+`conda install -c conda-forge dxchange scikit-build matplotlib notebook ipywidgets`
 
 `cd rectv_gpu; python setup.py install`
 
