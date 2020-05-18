@@ -21,15 +21,17 @@ Allocate GPU resources:
 
 In remote host (e.g. gn1), open the terminal, change directory to where you have your notebooks and type:
 
-`jupyter notebook --no-browser --port=13541`
+`jupyter notebook --no-browser --port=<port1>`
 
 In your local computer type:
 
-`ssh -N -f -L localhost:13542:localhost:13541 username@yw-picard07-clu0-gn-1.maxiv.lu.se`
+`ssh -N -f -L localhost:<port2>:localhost:<port1> username@address`
+
+E.g. port1=13543, port2=13545, address=w-picard05-clu0-gn-1.maxiv.lu.se
 
 Now open web browser (google chrome, firefox, ...) and type:
 
-`localhost:13542`
+`localhost:<port2>`
 
 ## Examples with jupyter notebook
 
