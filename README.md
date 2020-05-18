@@ -23,11 +23,13 @@ In remote host (e.g. gn1), open the terminal, change directory to where you have
 
 `jupyter notebook --no-browser --port=<port1>`
 
+E.g. port1=13543
+
 In your local computer type:
 
 `ssh -N -f -L localhost:<port2>:localhost:<port1> username@address`
 
-E.g. port1=13543, port2=13545, address=w-picard05-clu0-gn-1.maxiv.lu.se
+E.g. port2=13545, address=w-picard05-clu0-gn-1.maxiv.lu.se
 
 Now open web browser (google chrome, firefox, ...) and type:
 
