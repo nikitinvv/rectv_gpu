@@ -12,7 +12,7 @@ The module provides a tomographic reconstruction method, which relaxes the requi
 Example of reconstruction:
 
 .. image:: rectv.png
-    :width: 70%
+    :width: 90%
     :align: center
 
 ================
