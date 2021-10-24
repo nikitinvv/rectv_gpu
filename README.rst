@@ -4,6 +4,7 @@ RecTVGPU
 ================
 
 **rectv_gpu** is a C++ module with python wrapper for multi-GPU for four-dimensional (3D+time) tomographic reconstruction by time domain decomposition. For details, see
+
 Nikitin, Viktor V., et al. "Four-dimensional tomographic reconstruction by time domain decomposition." IEEE Transactions on Computational Imaging 5.3 (2019): 409-419.(https://ieeexplore.ieee.org/abstract/document/8637033)
 
 The module provides a tomographic reconstruction method, which relaxes the requirement of quasistatic samples during data acquistion. Dynamic tomographic data sets are decomposed in the temporal domain by projecting to a lower dimensional subspace of basis functions and deploying an additional L1 regularization technique where the penalty factor is taken for spatial and temporal derivatives. The iterative scheme involves solving the projected regularization problem with using modern multi-GPU systems.
