@@ -66,8 +66,8 @@ titer = 4  # number of inner tomography iterations
 # In[7]:
 
 
-nzp = 4 # number of slices to process simultaniously by gpu
-ngpus = 4 # number of gpus 
+nzp = 8 # number of slices to process simultaniously by gpu
+ngpus = 1 # number of gpus 
 
 
 # Take basis functions for decomosition 
